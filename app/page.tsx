@@ -1,94 +1,34 @@
 "use client";
 
-import { useState } from "react";
-
-interface Phone {
-  id: string;
-  name: string;
-  brand: string;
-  model: string;
-  color: string;
-  storage: string;
-  price: number;
-  quantity: number;
-  status: "in_stock" | "low_stock" | "out_of_stock";
-}
-
-// Sample data - in a real app, this would come from an API
-const samplePhones: Phone[] = [
-  {
-    id: "1",
-    name: "iPhone 15 Pro Max",
-    brand: "Apple",
-    model: "15 Pro Max",
-    color: "Titanium Blue",
-    storage: "256GB",
-    price: 29990000,
-    quantity: 45,
-    status: "in_stock"
-  },
-  {
-    id: "2",
-    name: "Samsung Galaxy S24 Ultra",
-    brand: "Samsung",
-    model: "S24 Ultra",
-    color: "Titanium Black",
-    storage: "512GB",
-    price: 27990000,
-    quantity: 32,
-    status: "in_stock"
-  },
-  {
-    id: "3",
-    name: "Xiaomi 14 Pro",
-    brand: "Xiaomi",
-    model: "14 Pro",
-    color: "Black",
-    storage: "256GB",
-    price: 18990000,
-    quantity: 5,
-    status: "low_stock"
-  },
-  {
-    id: "4",
-    name: "OPPO Find X7 Ultra",
-    brand: "OPPO",
-    model: "Find X7 Ultra",
-    color: "Ocean Blue",
-    storage: "512GB",
-    price: 22990000,
-    quantity: 0,
-    status: "out_of_stock"
-  },
-  {
-    id: "5",
-    name: "iPhone 15",
-    brand: "Apple",
-    model: "15",
-    color: "Pink",
-    storage: "128GB",
-    price: 21990000,
-    quantity: 78,
-    status: "in_stock"
-  },
-  {
-    id: "6",
-    name: "Samsung Galaxy A55",
-    brand: "Samsung",
-    model: "A55",
-    color: "Ice Blue",
-    storage: "128GB",
-    price: 8990000,
-    quantity: 3,
-    status: "low_stock"
-  }
-];
+import { useState, useEffect } from "react";
+import { getPhones, Phone } from "../lib/phoneService";
 
 export default function Home() {
-  const [phones] = useState<Phone[]>(samplePhones);
+  const [phones, setPhones] = useState<Phone[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterBrand, setFilterBrand] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+
+  // Load phones from Firestore
+  useEffect(() => {
+    const loadPhones = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getPhones();
+        setPhones(data);
+      } catch (err) {
+        console.error("Error loading phones:", err);
+        setError("Không thể tải dữ liệu. Vui lòng kiểm tra kết nối Firebase.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPhones();
+  }, []);
 
   // Calculate statistics
   const totalPhones = phones.reduce((sum, phone) => sum + phone.quantity, 0);
@@ -147,6 +87,59 @@ export default function Home() {
       </span>
     );
   };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-black">
+        <div className="text-center">
+          <div className="mb-4 inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+          <p className="text-zinc-600 dark:text-zinc-400">
+            Đang tải dữ liệu...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-zinc-50 dark:bg-black">
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <div className="rounded-lg bg-red-50 p-4 dark:bg-red-900/20">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg
+                  className="h-5 w-5 text-red-400"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800 dark:text-red-400">
+                  Lỗi tải dữ liệu
+                </h3>
+                <div className="mt-2 text-sm text-red-700 dark:text-red-300">
+                  <p>{error}</p>
+                  <p className="mt-2 text-xs">
+                    Vui lòng kiểm tra cấu hình Firebase trong file{" "}
+                    <code className="rounded bg-red-100 px-1 py-0.5 dark:bg-red-900/30">
+                      lib/firebase.ts
+                    </code>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
