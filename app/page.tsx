@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getPhones, Phone } from "../lib/phoneService";
+import ImportForm from "../components/ImportForm";
 
 export default function Home() {
   const [phones, setPhones] = useState<Phone[]>([]);
@@ -10,23 +11,24 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterBrand, setFilterBrand] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [isImportFormOpen, setIsImportFormOpen] = useState(false);
 
   // Load phones from Firestore
-  useEffect(() => {
-    const loadPhones = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await getPhones();
-        setPhones(data);
-      } catch (err) {
-        console.error("Error loading phones:", err);
-        setError("Không thể tải dữ liệu. Vui lòng kiểm tra kết nối Firebase.");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadPhones = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getPhones();
+      setPhones(data);
+    } catch (err) {
+      console.error("Error loading phones:", err);
+      setError("Không thể tải dữ liệu. Vui lòng kiểm tra kết nối Firebase.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadPhones();
   }, []);
 
@@ -145,13 +147,34 @@ export default function Home() {
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-            Thống Kê Kho Hàng Điện Thoại
-          </h1>
-          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            Quản lý và theo dõi tồn kho sản phẩm điện thoại
-          </p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
+              Thống Kê Kho Hàng Điện Thoại
+            </h1>
+            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+              Quản lý và theo dõi tồn kho sản phẩm điện thoại
+            </p>
+          </div>
+          <button
+            onClick={() => setIsImportFormOpen(true)}
+            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900"
+          >
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            Nhập Hàng
+          </button>
         </div>
 
         {/* Statistics Cards */}
@@ -428,6 +451,15 @@ export default function Home() {
           Hiển thị {filteredPhones.length} / {phones.length} sản phẩm
         </div>
       </div>
+
+      {/* Import Form Modal */}
+      <ImportForm
+        isOpen={isImportFormOpen}
+        onClose={() => setIsImportFormOpen(false)}
+        onSuccess={() => {
+          loadPhones();
+        }}
+      />
     </div>
   );
 }
