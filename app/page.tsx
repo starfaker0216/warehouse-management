@@ -1,65 +1,440 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+
+interface Phone {
+  id: string;
+  name: string;
+  brand: string;
+  model: string;
+  color: string;
+  storage: string;
+  price: number;
+  quantity: number;
+  status: "in_stock" | "low_stock" | "out_of_stock";
+}
+
+// Sample data - in a real app, this would come from an API
+const samplePhones: Phone[] = [
+  {
+    id: "1",
+    name: "iPhone 15 Pro Max",
+    brand: "Apple",
+    model: "15 Pro Max",
+    color: "Titanium Blue",
+    storage: "256GB",
+    price: 29990000,
+    quantity: 45,
+    status: "in_stock"
+  },
+  {
+    id: "2",
+    name: "Samsung Galaxy S24 Ultra",
+    brand: "Samsung",
+    model: "S24 Ultra",
+    color: "Titanium Black",
+    storage: "512GB",
+    price: 27990000,
+    quantity: 32,
+    status: "in_stock"
+  },
+  {
+    id: "3",
+    name: "Xiaomi 14 Pro",
+    brand: "Xiaomi",
+    model: "14 Pro",
+    color: "Black",
+    storage: "256GB",
+    price: 18990000,
+    quantity: 5,
+    status: "low_stock"
+  },
+  {
+    id: "4",
+    name: "OPPO Find X7 Ultra",
+    brand: "OPPO",
+    model: "Find X7 Ultra",
+    color: "Ocean Blue",
+    storage: "512GB",
+    price: 22990000,
+    quantity: 0,
+    status: "out_of_stock"
+  },
+  {
+    id: "5",
+    name: "iPhone 15",
+    brand: "Apple",
+    model: "15",
+    color: "Pink",
+    storage: "128GB",
+    price: 21990000,
+    quantity: 78,
+    status: "in_stock"
+  },
+  {
+    id: "6",
+    name: "Samsung Galaxy A55",
+    brand: "Samsung",
+    model: "A55",
+    color: "Ice Blue",
+    storage: "128GB",
+    price: 8990000,
+    quantity: 3,
+    status: "low_stock"
+  }
+];
 
 export default function Home() {
+  const [phones] = useState<Phone[]>(samplePhones);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterBrand, setFilterBrand] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+
+  // Calculate statistics
+  const totalPhones = phones.reduce((sum, phone) => sum + phone.quantity, 0);
+  const totalValue = phones.reduce(
+    (sum, phone) => sum + phone.price * phone.quantity,
+    0
+  );
+  const lowStockCount = phones.filter(
+    (phone) => phone.status === "low_stock"
+  ).length;
+  const outOfStockCount = phones.filter(
+    (phone) => phone.status === "out_of_stock"
+  ).length;
+  const uniqueBrands = new Set(phones.map((phone) => phone.brand)).size;
+
+  // Filter phones
+  const filteredPhones = phones.filter((phone) => {
+    const matchesSearch =
+      phone.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      phone.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      phone.model.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesBrand = filterBrand === "all" || phone.brand === filterBrand;
+    const matchesStatus =
+      filterStatus === "all" || phone.status === filterStatus;
+    return matchesSearch && matchesBrand && matchesStatus;
+  });
+
+  const brands = Array.from(new Set(phones.map((phone) => phone.brand)));
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND"
+    }).format(amount);
+  };
+
+  const getStatusBadge = (status: Phone["status"]) => {
+    const styles = {
+      in_stock:
+        "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+      low_stock:
+        "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+      out_of_stock:
+        "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+    };
+    const labels = {
+      in_stock: "Còn hàng",
+      low_stock: "Sắp hết",
+      out_of_stock: "Hết hàng"
+    };
+    return (
+      <span
+        className={`px-2.5 py-1 rounded-full text-xs font-medium ${styles[status]}`}
+      >
+        {labels[status]}
+      </span>
+    );
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="min-h-screen bg-zinc-50 dark:bg-black">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
+            Thống Kê Kho Hàng Điện Thoại
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+            Quản lý và theo dõi tồn kho sản phẩm điện thoại
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* Statistics Cards */}
+        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-zinc-900">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                  Tổng số máy
+                </p>
+                <p className="mt-2 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+                  {totalPhones}
+                </p>
+              </div>
+              <div className="rounded-full bg-blue-100 p-3 dark:bg-blue-900/30">
+                <svg
+                  className="h-6 w-6 text-blue-600 dark:text-blue-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-zinc-900">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                  Tổng giá trị
+                </p>
+                <p className="mt-2 text-xl font-bold text-zinc-900 dark:text-zinc-50">
+                  {formatCurrency(totalValue)}
+                </p>
+              </div>
+              <div className="rounded-full bg-green-100 p-3 dark:bg-green-900/30">
+                <svg
+                  className="h-6 w-6 text-green-600 dark:text-green-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-zinc-900">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                  Số thương hiệu
+                </p>
+                <p className="mt-2 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+                  {uniqueBrands}
+                </p>
+              </div>
+              <div className="rounded-full bg-purple-100 p-3 dark:bg-purple-900/30">
+                <svg
+                  className="h-6 w-6 text-purple-600 dark:text-purple-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-zinc-900">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                  Sắp hết hàng
+                </p>
+                <p className="mt-2 text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                  {lowStockCount}
+                </p>
+              </div>
+              <div className="rounded-full bg-yellow-100 p-3 dark:bg-yellow-900/30">
+                <svg
+                  className="h-6 w-6 text-yellow-600 dark:text-yellow-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-zinc-900">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                  Hết hàng
+                </p>
+                <p className="mt-2 text-2xl font-bold text-red-600 dark:text-red-400">
+                  {outOfStockCount}
+                </p>
+              </div>
+              <div className="rounded-full bg-red-100 p-3 dark:bg-red-900/30">
+                <svg
+                  className="h-6 w-6 text-red-600 dark:text-red-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
         </div>
-      </main>
+
+        {/* Filters and Search */}
+        <div className="mb-6 rounded-lg bg-white p-4 shadow-sm dark:bg-zinc-900">
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="Tìm kiếm theo tên, thương hiệu, model..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
+              />
+            </div>
+            <select
+              value={filterBrand}
+              onChange={(e) => setFilterBrand(e.target.value)}
+              className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
+            >
+              <option value="all">Tất cả thương hiệu</option>
+              {brands.map((brand) => (
+                <option key={brand} value={brand}>
+                  {brand}
+                </option>
+              ))}
+            </select>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
+            >
+              <option value="all">Tất cả trạng thái</option>
+              <option value="in_stock">Còn hàng</option>
+              <option value="low_stock">Sắp hết</option>
+              <option value="out_of_stock">Hết hàng</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Inventory Table */}
+        <div className="overflow-hidden rounded-lg bg-white shadow-sm dark:bg-zinc-900">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-zinc-50 dark:bg-zinc-800/50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                    Sản phẩm
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                    Thương hiệu
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                    Màu sắc
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                    Bộ nhớ
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                    Giá
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                    Số lượng
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                    Trạng thái
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-200 bg-white dark:divide-zinc-800 dark:bg-zinc-900">
+                {filteredPhones.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      className="px-6 py-12 text-center text-sm text-zinc-500 dark:text-zinc-400"
+                    >
+                      Không tìm thấy sản phẩm nào
+                    </td>
+                  </tr>
+                ) : (
+                  filteredPhones.map((phone) => (
+                    <tr
+                      key={phone.id}
+                      className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                    >
+                      <td className="whitespace-nowrap px-6 py-4">
+                        <div className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                          {phone.name}
+                        </div>
+                        <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                          {phone.model}
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-zinc-900 dark:text-zinc-50">
+                        {phone.brand}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-zinc-900 dark:text-zinc-50">
+                        {phone.color}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-zinc-900 dark:text-zinc-50">
+                        {phone.storage}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                        {formatCurrency(phone.price)}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-zinc-900 dark:text-zinc-50">
+                        <span
+                          className={`font-semibold ${
+                            phone.quantity === 0
+                              ? "text-red-600 dark:text-red-400"
+                              : phone.quantity < 10
+                              ? "text-yellow-600 dark:text-yellow-400"
+                              : "text-green-600 dark:text-green-400"
+                          }`}
+                        >
+                          {phone.quantity}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm">
+                        {getStatusBadge(phone.status)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Summary */}
+        <div className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
+          Hiển thị {filteredPhones.length} / {phones.length} sản phẩm
+        </div>
+      </div>
     </div>
   );
 }
