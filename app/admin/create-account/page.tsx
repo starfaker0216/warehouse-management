@@ -5,10 +5,10 @@ import { createEmployee } from "../../../lib/authService";
 import type { EmployeeRole } from "../../../lib/authService";
 
 export default function CreateAccountPage() {
-  const [employeeCode, setEmployeeCode] = useState("admin");
-  const [password, setPassword] = useState("1102");
-  const [name, setName] = useState("Administrator");
-  const [role, setRole] = useState<EmployeeRole>("admin");
+  const [employeeCode, setEmployeeCode] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [role, setRole] = useState<EmployeeRole>("employee");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
@@ -49,38 +49,6 @@ export default function CreateAccountPage() {
     }
   };
 
-  const createAdminAccount = async () => {
-    setLoading(true);
-    setMessage(null);
-
-    try {
-      const employeeId = await createEmployee(
-        "admin",
-        "1102",
-        "Administrator",
-        "admin"
-      );
-      setMessage({
-        type: "success",
-        text: `Tài khoản admin đã được tạo thành công! ID: ${employeeId}`
-      });
-    } catch (error: unknown) {
-      let errorMessage =
-        "Không thể tạo tài khoản admin. Có thể tài khoản đã tồn tại.";
-
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-
-      setMessage({
-        type: "error",
-        text: errorMessage
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
@@ -93,30 +61,8 @@ export default function CreateAccountPage() {
           </p>
         </div>
 
-        {/* Quick create admin button */}
-        <div className="mb-6 rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
-          <h2 className="mb-2 text-sm font-medium text-blue-900 dark:text-blue-300">
-            Tạo Tài Khoản Admin Mặc Định
-          </h2>
-          <p className="mb-3 text-xs text-blue-700 dark:text-blue-400">
-            Mã nhân viên: <strong>admin</strong> | Mật khẩu:{" "}
-            <strong>1102</strong> | Phân quyền: <strong>admin</strong>
-          </p>
-          <button
-            onClick={createAdminAccount}
-            disabled={loading}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 dark:focus:ring-offset-zinc-900"
-          >
-            {loading ? "Đang tạo..." : "Tạo Tài Khoản Admin"}
-          </button>
-        </div>
-
-        {/* Create custom account form */}
+        {/* Create account form */}
         <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-zinc-900">
-          <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-            Tạo Tài Khoản Tùy Chỉnh
-          </h2>
-
           {message && (
             <div
               className={`mb-4 rounded-lg p-3 text-sm ${
