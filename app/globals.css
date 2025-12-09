@@ -24,3 +24,10 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Override PillNav positioning in Header */
+.pill-nav-container > div {
+  position: relative !important;
+  top: 0 !important;
+  left: 0 !important;
+}

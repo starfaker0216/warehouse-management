@@ -2780,6 +2780,11 @@ graphemer@^1.4.0:
   resolved "https://registry.yarnpkg.com/graphemer/-/graphemer-1.4.0.tgz#fb2f1d55e0e3a1849aeffc90c4fa0dd53a0e66c6"
   integrity sha512-EtKwoO6kxCL9WO5xipiHTZlSzBm7WLT627TqC/uVRd0HKmq8NXyebnNYxDoBi7wt8eTWrUrKXCOVaFq9x1kgag==
 
+gsap@^3.14.1:
+  version "3.14.1"
+  resolved "https://registry.yarnpkg.com/gsap/-/gsap-3.14.1.tgz#b1f1223cbe55668c7b899031e56cceb9a9243b7d"
+  integrity sha512-nOFRJpVu+U0IPgKzfC5MEdZrJ1iVidGaOuxK0+Un+7vMOHa5rw/SKOaMaRRyHZiJKaeAEALTBwnj6R3gifyGBw==
+
 gtoken@^7.0.0:
   version "7.1.0"
   resolved "https://registry.yarnpkg.com/gtoken/-/gtoken-7.1.0.tgz#d61b4ebd10132222817f7222b1e6064bd463fc26"

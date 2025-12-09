@@ -147,35 +147,14 @@ export default function ImportPage() {
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-              Phiếu Nhập Hàng
-            </h1>
-            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-              Thêm phiếu nhập hàng mới vào hệ thống
-            </p>
-          </div>
-          <button
-            onClick={() => router.push("/")}
-            className="flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-          >
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-            Đóng
-          </button>
+        {/* Page Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
+            Phiếu Nhập Hàng
+          </h1>
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+            Thêm phiếu nhập hàng mới vào hệ thống
+          </p>
         </div>
 
         {/* Success Message */}
