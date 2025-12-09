@@ -28,6 +28,7 @@ const hashPassword = (password: string): string => {
 };
 
 // Login with employee code and password
+// Simple verification from Firestore - no tokens needed
 export const login = async (
   employeeCode: string,
   password: string
@@ -133,7 +134,6 @@ export const createEmployee = async (
     const docRef = await addDoc(employeesRef, newEmployee);
     return docRef.id;
   } catch (error) {
-    console.error("Error creating employee:", error);
     // Re-throw with more context
     if (error instanceof Error) {
       // Check for specific Firebase errors

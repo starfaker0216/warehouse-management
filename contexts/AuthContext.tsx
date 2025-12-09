@@ -1,7 +1,13 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { Employee, login as loginService, getAuthFromStorage, saveAuthToStorage, removeAuthFromStorage } from "../lib/authService";
+import { createContext, useContext, useState, ReactNode } from "react";
+import {
+  Employee,
+  login as loginService,
+  getAuthFromStorage,
+  saveAuthToStorage,
+  removeAuthFromStorage
+} from "../lib/authService";
 
 interface AuthContextType {
   employee: Employee | null;
@@ -14,19 +20,19 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [employee, setEmployee] = useState<Employee | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Check if user is already logged in
-    const savedAuth = getAuthFromStorage();
-    if (savedAuth) {
-      setEmployee(savedAuth);
+  const [employee, setEmployee] = useState<Employee | null>(() => {
+    // Initialize from localStorage
+    if (typeof window !== "undefined") {
+      return getAuthFromStorage();
     }
-    setLoading(false);
-  }, []);
+    return null;
+  });
+  const [loading] = useState(false);
 
-  const login = async (employeeCode: string, password: string): Promise<boolean> => {
+  const login = async (
+    employeeCode: string,
+    password: string
+  ): Promise<boolean> => {
     try {
       const employeeData = await loginService(employeeCode, password);
       if (employeeData) {
@@ -35,8 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return true;
       }
       return false;
-    } catch (error) {
-      console.error("Login error:", error);
+    } catch {
       return false;
     }
   };
@@ -53,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         login,
         logout,
-        isAuthenticated: !!employee,
+        isAuthenticated: !!employee
       }}
     >
       {children}
@@ -68,5 +73,3 @@ export function useAuth() {
   }
   return context;
 }
-
-
