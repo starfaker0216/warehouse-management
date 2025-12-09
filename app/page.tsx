@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getPhones, Phone } from "../lib/phoneService";
-import ImportForm from "../components/ImportForm";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function Home() {
@@ -16,7 +15,6 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterBrand, setFilterBrand] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [isImportFormOpen, setIsImportFormOpen] = useState(false);
 
   // Load phones from Firestore
   const loadPhones = async () => {
@@ -180,7 +178,7 @@ export default function Home() {
           <div>
             <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
               Thống Kê Kho Hàng Điện Thoại
-          </h1>
+            </h1>
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
               Quản lý và theo dõi tồn kho sản phẩm điện thoại
             </p>
@@ -191,8 +189,8 @@ export default function Home() {
             )}
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsImportFormOpen(true)}
+            <Link
+              href="/import"
               className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900"
             >
               <svg
@@ -209,7 +207,7 @@ export default function Home() {
                 />
               </svg>
               Nhập Hàng
-            </button>
+            </Link>
             {employee?.role === "admin" && (
               <Link
                 href="/admin/create-account"
@@ -533,15 +531,6 @@ export default function Home() {
           Hiển thị {filteredPhones.length} / {phones.length} sản phẩm
         </div>
       </div>
-
-      {/* Import Form Modal */}
-      <ImportForm
-        isOpen={isImportFormOpen}
-        onClose={() => setIsImportFormOpen(false)}
-        onSuccess={() => {
-          loadPhones();
-        }}
-      />
     </div>
   );
 }
