@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../contexts/AuthContext";
 import { usePhoneStore } from "../stores/usePhoneStore";
 import { usePhoneStatistics } from "../hooks/usePhoneStatistics";
-import { usePhoneFilters } from "../hooks/usePhoneFilters";
 import StatisticsCards from "../components/home/StatisticsCards";
 import PhoneFilters from "../components/home/PhoneFilters";
 import PhoneTable from "../components/home/PhoneTable";
@@ -17,11 +16,22 @@ export default function Home() {
   const router = useRouter();
   const { phones, loading, error, fetchPhones } = usePhoneStore();
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
+  // Debounce search term
   useEffect(() => {
-    fetchPhones();
-  }, [fetchPhones]);
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Fetch phones với search và filter
+  useEffect(() => {
+    fetchPhones(debouncedSearchTerm, filterStatus);
+  }, [fetchPhones, debouncedSearchTerm, filterStatus]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -31,7 +41,6 @@ export default function Home() {
   }, [authLoading, isAuthenticated, router]);
 
   const statistics = usePhoneStatistics(phones);
-  const filteredPhones = usePhoneFilters(phones, searchTerm, filterStatus);
 
   // Show loading while checking auth
   if (authLoading) {
@@ -76,11 +85,11 @@ export default function Home() {
         />
 
         {/* Inventory Table */}
-        <PhoneTable phones={filteredPhones} />
+        <PhoneTable phones={phones} />
 
         {/* Summary */}
         <div className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
-          Hiển thị {filteredPhones.length} / {phones.length} sản phẩm
+          Hiển thị {phones.length} sản phẩm
         </div>
       </div>
     </div>

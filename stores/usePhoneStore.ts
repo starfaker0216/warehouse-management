@@ -11,7 +11,7 @@ interface PhoneState {
   phones: Phone[];
   loading: boolean;
   error: string | null;
-  fetchPhones: () => Promise<void>;
+  fetchPhones: (searchTerm?: string, filterStatus?: string) => Promise<void>;
   addPhone: (
     phoneData: Omit<Phone, "id" | "createdAt" | "updatedAt">
   ) => Promise<void>;
@@ -28,10 +28,10 @@ export const usePhoneStore = create<PhoneState>((set) => ({
   loading: false,
   error: null,
 
-  fetchPhones: async () => {
+  fetchPhones: async (searchTerm?: string, filterStatus?: string) => {
     set({ loading: true, error: null });
     try {
-      const phonesData = await getPhones();
+      const phonesData = await getPhones(searchTerm, filterStatus);
       set({ phones: phonesData, loading: false });
     } catch (err) {
       console.error("Error loading phones:", err);
@@ -45,6 +45,7 @@ export const usePhoneStore = create<PhoneState>((set) => ({
   addPhone: async (phoneData) => {
     try {
       await addPhoneService(phoneData);
+      // Fetch lại với cùng search và filter nếu có
       const phonesData = await getPhones();
       set({ phones: phonesData });
     } catch (err) {
@@ -56,6 +57,7 @@ export const usePhoneStore = create<PhoneState>((set) => ({
   updatePhone: async (id, phoneData) => {
     try {
       await updatePhoneService(id, phoneData);
+      // Fetch lại với cùng search và filter nếu có
       const phonesData = await getPhones();
       set({ phones: phonesData });
     } catch (err) {
@@ -67,6 +69,7 @@ export const usePhoneStore = create<PhoneState>((set) => ({
   deletePhone: async (id) => {
     try {
       await deletePhoneService(id);
+      // Fetch lại với cùng search và filter nếu có
       const phonesData = await getPhones();
       set({ phones: phonesData });
     } catch (err) {
@@ -77,4 +80,3 @@ export const usePhoneStore = create<PhoneState>((set) => ({
 
   setPhones: (phones) => set({ phones })
 }));
-
