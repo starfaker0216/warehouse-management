@@ -3,6 +3,7 @@ import { addExportRecord } from "../lib/exportService";
 import { updatePhone as updatePhoneService, Phone } from "../lib/phoneService";
 import { getCustomerByPhone, addCustomer } from "../lib/customerService";
 import { usePhoneStore } from "./usePhoneStore";
+import { useAuthStore } from "./useAuthStore";
 import toast from "react-hot-toast";
 
 export interface ExportFormData {
@@ -162,6 +163,11 @@ export const useExportFormStore = create<ExportFormState>((set, get) => ({
         );
       }
 
+      // Get employee info
+      const employee = useAuthStore.getState().employee;
+      const employeeId = employee?.id || "";
+      const employeeName = employee?.name || "";
+
       // Add export record
       await addExportRecord({
         customerPhone: formData.customerPhone.trim(),
@@ -176,7 +182,9 @@ export const useExportFormStore = create<ExportFormState>((set, get) => ({
         installmentPayment: formData.installmentPayment || 0,
         bankTransfer: formData.bankTransfer || 0,
         cashPayment: formData.cashPayment || 0,
-        otherPayment: formData.otherPayment.trim()
+        otherPayment: formData.otherPayment.trim(),
+        employeeId,
+        employeeName
       });
 
       // Update phone quantity (decrease by 1)
@@ -203,10 +211,15 @@ export const useExportFormStore = create<ExportFormState>((set, get) => ({
             0
           );
 
-          await updatePhoneService(formData.phoneId, {
-            data: updatedData,
-            totalQuantity
-          });
+          await updatePhoneService(
+            formData.phoneId,
+            {
+              data: updatedData,
+              totalQuantity
+            },
+            employeeId,
+            employeeName
+          );
 
           // Refresh phones list
           await phoneStore.fetchPhones();

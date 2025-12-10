@@ -23,6 +23,10 @@ export interface Phone {
   data: Array<{ color: string; quantity: number; price: number }>;
   totalQuantity: number;
   status: "in_stock" | "low_stock" | "out_of_stock";
+  updatedBy?: {
+    employeeId: string;
+    employeeName: string;
+  };
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -92,6 +96,7 @@ const docToPhone = (doc: QueryDocumentSnapshot<DocumentData>): Phone => {
     data: phoneDataWithPrice,
     totalQuantity: totalQuantity,
     status: data.status || calculateStatus(totalQuantity),
+    updatedBy: data.updatedBy || undefined,
     createdAt: data.createdAt?.toDate(),
     updatedAt: data.updatedAt?.toDate()
   };
@@ -222,7 +227,9 @@ export const addPhone = async (
 // Update a phone
 export const updatePhone = async (
   id: string,
-  phoneData: Partial<Omit<Phone, "id" | "createdAt" | "updatedAt">>
+  phoneData: Partial<Omit<Phone, "id" | "createdAt" | "updatedAt">>,
+  employeeId?: string,
+  employeeName?: string
 ): Promise<void> => {
   try {
     const phoneRef = doc(db, "phones", id);
@@ -230,6 +237,14 @@ export const updatePhone = async (
       ...phoneData,
       updatedAt: Timestamp.now()
     };
+
+    // Add employee info if provided
+    if (employeeId && employeeName) {
+      updateData.updatedBy = {
+        employeeId,
+        employeeName
+      };
+    }
 
     // Recalculate status if totalQuantity is being updated
     if (phoneData.totalQuantity !== undefined) {

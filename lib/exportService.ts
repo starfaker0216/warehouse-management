@@ -28,6 +28,8 @@ export interface ExportRecord {
   bankTransfer: number; // chuyển khoản
   cashPayment: number; // tiền mặt
   otherPayment: string; // khác
+  employeeId: string; // id người nhập dữ liệu
+  employeeName: string; // tên người nhập dữ liệu
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -52,6 +54,8 @@ const docToExportRecord = (
     bankTransfer: data.bankTransfer || 0,
     cashPayment: data.cashPayment || 0,
     otherPayment: data.otherPayment || "",
+    employeeId: data.employeeId || "",
+    employeeName: data.employeeName || "",
     createdAt: data.createdAt?.toDate(),
     updatedAt: data.updatedAt?.toDate()
   };

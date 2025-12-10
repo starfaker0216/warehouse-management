@@ -9,7 +9,7 @@ import {
   orderBy,
   Timestamp,
   QueryDocumentSnapshot,
-  DocumentData,
+  DocumentData
 } from "firebase/firestore";
 import { db } from "./firebase";
 
@@ -26,12 +26,16 @@ export interface ImportRecord {
   supplier: string; // nhà cung cấp
   imeiType: string; // loại imei
   note: string; // ghi chú
+  employeeId: string; // id người nhập dữ liệu
+  employeeName: string; // tên người nhập dữ liệu
   createdAt?: Date;
   updatedAt?: Date;
 }
 
 // Convert Firestore document to ImportRecord object
-const docToImportRecord = (doc: QueryDocumentSnapshot<DocumentData>): ImportRecord => {
+const docToImportRecord = (
+  doc: QueryDocumentSnapshot<DocumentData>
+): ImportRecord => {
   const data = doc.data();
   return {
     id: doc.id,
@@ -46,8 +50,10 @@ const docToImportRecord = (doc: QueryDocumentSnapshot<DocumentData>): ImportReco
     supplier: data.supplier || "",
     imeiType: data.imeiType || "",
     note: data.note || "",
+    employeeId: data.employeeId || "",
+    employeeName: data.employeeName || "",
     createdAt: data.createdAt?.toDate(),
-    updatedAt: data.updatedAt?.toDate(),
+    updatedAt: data.updatedAt?.toDate()
   };
 };
 
@@ -74,7 +80,7 @@ export const addImportRecord = async (
       ...importData,
       importDate: Timestamp.fromDate(importData.importDate),
       createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
+      updatedAt: Timestamp.now()
     };
     const docRef = await addDoc(importsRef, newImport);
     return docRef.id;
@@ -93,13 +99,13 @@ export const updateImportRecord = async (
     const importRef = doc(db, "imports", id);
     const updateData: any = {
       ...importData,
-      updatedAt: Timestamp.now(),
+      updatedAt: Timestamp.now()
     };
-    
+
     if (importData.importDate) {
       updateData.importDate = Timestamp.fromDate(importData.importDate);
     }
-    
+
     await updateDoc(importRef, updateData);
   } catch (error) {
     console.error("Error updating import record:", error);
@@ -117,5 +123,3 @@ export const deleteImportRecord = async (id: string): Promise<void> => {
     throw error;
   }
 };
-
-

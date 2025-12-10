@@ -3,6 +3,7 @@ import { addImportRecord } from "../lib/importService";
 import { updatePhone as updatePhoneService } from "../lib/phoneService";
 import { usePhoneStore } from "./usePhoneStore";
 import { useConfigStore } from "./useConfigStore";
+import { useAuthStore } from "./useAuthStore";
 import toast from "react-hot-toast";
 
 export interface ImportFormData {
@@ -164,8 +165,17 @@ export const useImportFormStore = create<ImportFormState>((set, get) => ({
         set({ newSupplier: "", showAddSupplier: false });
       }
 
+      // Get employee info
+      const employee = useAuthStore.getState().employee;
+      const employeeId = employee?.id || "";
+      const employeeName = employee?.name || "";
+
       // Save import record
-      await addImportRecord(updatedFormData);
+      await addImportRecord({
+        ...updatedFormData,
+        employeeId,
+        employeeName
+      });
 
       // Update phone inventory
       const phones = usePhoneStore.getState().phones;
@@ -200,10 +210,15 @@ export const useImportFormStore = create<ImportFormState>((set, get) => ({
           const newTotalQuantity =
             selectedPhone.totalQuantity + updatedFormData.quantity;
 
-          await updatePhoneService(updatedFormData.phoneId, {
-            data: updatedData,
-            totalQuantity: newTotalQuantity
-          });
+          await updatePhoneService(
+            updatedFormData.phoneId,
+            {
+              data: updatedData,
+              totalQuantity: newTotalQuantity
+            },
+            employeeId,
+            employeeName
+          );
 
           // Refresh phones
           await usePhoneStore.getState().fetchPhones();

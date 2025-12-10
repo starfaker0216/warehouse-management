@@ -6,6 +6,7 @@ import {
   updatePhone as updatePhoneService,
   deletePhone as deletePhoneService
 } from "../lib/phoneService";
+import { useAuthStore } from "./useAuthStore";
 
 interface PhoneState {
   phones: Phone[];
@@ -56,7 +57,12 @@ export const usePhoneStore = create<PhoneState>((set) => ({
 
   updatePhone: async (id, phoneData) => {
     try {
-      await updatePhoneService(id, phoneData);
+      // Get employee info
+      const employee = useAuthStore.getState().employee;
+      const employeeId = employee?.id || "";
+      const employeeName = employee?.name || "";
+
+      await updatePhoneService(id, phoneData, employeeId, employeeName);
       // Fetch lại với cùng search và filter nếu có
       const phonesData = await getPhones();
       set({ phones: phonesData });
