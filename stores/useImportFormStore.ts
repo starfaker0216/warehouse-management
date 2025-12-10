@@ -44,6 +44,8 @@ interface ImportFormState {
   showPhoneSelector: boolean;
   priceInputValue: string;
   isPriceFocused: boolean;
+  dateInputValue: string;
+  isDateFocused: boolean;
 
   // Actions
   setFormData: (data: Partial<ImportFormData>) => void;
@@ -56,6 +58,8 @@ interface ImportFormState {
   setShowPhoneSelector: (show: boolean) => void;
   setPriceInputValue: (value: string) => void;
   setIsPriceFocused: (focused: boolean) => void;
+  setDateInputValue: (value: string) => void;
+  setIsDateFocused: (focused: boolean) => void;
   handlePhoneSelect: (phoneId: string, phoneType: string) => void;
   resetForm: () => void;
   handleSubmit: () => Promise<void>;
@@ -72,6 +76,8 @@ export const useImportFormStore = create<ImportFormState>((set, get) => ({
   showPhoneSelector: false,
   priceInputValue: "",
   isPriceFocused: false,
+  dateInputValue: "",
+  isDateFocused: false,
 
   setFormData: (data) =>
     set((state) => ({
@@ -87,6 +93,8 @@ export const useImportFormStore = create<ImportFormState>((set, get) => ({
   setShowPhoneSelector: (show) => set({ showPhoneSelector: show }),
   setPriceInputValue: (value) => set({ priceInputValue: value }),
   setIsPriceFocused: (focused) => set({ isPriceFocused: focused }),
+  setDateInputValue: (value) => set({ dateInputValue: value }),
+  setIsDateFocused: (focused) => set({ isDateFocused: focused }),
 
   handlePhoneSelect: (phoneId, phoneType) => {
     set((state) => ({
@@ -102,6 +110,7 @@ export const useImportFormStore = create<ImportFormState>((set, get) => ({
     set({
       formData: initialFormData,
       priceInputValue: "",
+      dateInputValue: "",
       showAddColor: false,
       showAddSupplier: false,
       newColor: "",

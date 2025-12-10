@@ -7,7 +7,10 @@ import PhoneSelectorField from "../../components/import/PhoneSelectorField";
 import ColorSelectorField from "../../components/import/ColorSelectorField";
 import SupplierSelectorField from "../../components/import/SupplierSelectorField";
 import PriceInputField from "../../components/import/PriceInputField";
+import DateInputField from "../../components/import/DateInputField";
 import { Toaster } from "react-hot-toast";
+import { formatDate } from "../../utils/dateUtils";
+import { useEffect } from "react";
 
 export default function ImportPage() {
   const router = useRouter();
@@ -33,12 +36,25 @@ export default function ImportPage() {
     setPriceInputValue,
     isPriceFocused,
     setIsPriceFocused,
+    dateInputValue,
+    setDateInputValue,
+    isDateFocused,
+    setIsDateFocused,
     authLoading,
     isAuthenticated,
     handlePhoneSelect,
     handlePhoneAdded,
     handleSubmit
   } = useImportForm();
+
+  // Initialize and sync date input value with formData.importDate when not focused
+  useEffect(() => {
+    if (!isDateFocused && formData.importDate) {
+      const formatted = formatDate(formData.importDate);
+      setDateInputValue(formatted);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.importDate, isDateFocused]);
 
   if (authLoading) {
     return (
@@ -168,24 +184,17 @@ export default function ImportPage() {
                 onPriceFocus={setIsPriceFocused}
               />
 
-              {/* Ngày Nhập */}
-              <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Ngày Nhập <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={formData.importDate.toISOString().split("T")[0]}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      importDate: new Date(e.target.value)
-                    })
-                  }
-                  className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
-                />
-              </div>
+              {/* Date Input */}
+              <DateInputField
+                importDate={formData.importDate}
+                dateInputValue={dateInputValue}
+                isDateFocused={isDateFocused}
+                onDateChange={(date) =>
+                  setFormData({ ...formData, importDate: date })
+                }
+                onDateInputValueChange={setDateInputValue}
+                onDateFocus={setIsDateFocused}
+              />
 
               {/* Supplier Selector */}
               <SupplierSelectorField

@@ -78,6 +78,12 @@ export function useImportForm() {
     isPriceFocused: importFormStore.isPriceFocused,
     setIsPriceFocused: importFormStore.setIsPriceFocused,
 
+    // Date input states
+    dateInputValue: importFormStore.dateInputValue,
+    setDateInputValue: importFormStore.setDateInputValue,
+    isDateFocused: importFormStore.isDateFocused,
+    setIsDateFocused: importFormStore.setIsDateFocused,
+
     // Loading and error
     loading: importFormStore.loading,
     error: importFormStore.error,
