@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../contexts/AuthContext";
 import { useExportFormStore } from "../../stores/useExportFormStore";
@@ -10,10 +10,9 @@ import { Toaster, toast } from "react-hot-toast";
 import Loading from "../../components/common/Loading";
 import { getCustomerByPhone } from "../../lib/customerService";
 
-export default function ExportPage() {
+function ExportForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { loading: authLoading, isAuthenticated } = useAuth();
   const { phones, fetchPhones } = usePhoneStore();
   const {
     formData,
@@ -82,14 +81,6 @@ export default function ExportPage() {
       }
     }
   }, [searchParams, phones, initializeFromPhone]);
-
-  if (authLoading) {
-    return <Loading />;
-  }
-
-  if (!isAuthenticated) {
-    return null;
-  }
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -388,5 +379,23 @@ export default function ExportPage() {
         }}
       />
     </div>
+  );
+}
+
+export default function ExportPage() {
+  const { loading: authLoading, isAuthenticated } = useAuth();
+
+  if (authLoading) {
+    return <Loading />;
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  return (
+    <Suspense fallback={<Loading />}>
+      <ExportForm />
+    </Suspense>
   );
 }
