@@ -18,7 +18,6 @@ export interface ImportRecord {
   phoneId: string; // id máy
   importDate: Date; // ngày nhập
   phoneType: string; // loại máy
-  totalQuantity: number; // số lượng tổng
   quantity: number; // số lượng
   imei: string; // imei
   color: string; // màu sắc
@@ -42,7 +41,6 @@ const docToImportRecord = (
     phoneId: data.phoneId || "",
     importDate: data.importDate?.toDate() || new Date(),
     phoneType: data.phoneType || "",
-    totalQuantity: data.totalQuantity || 0,
     quantity: data.quantity || 0,
     imei: data.imei || "",
     color: data.color || "",

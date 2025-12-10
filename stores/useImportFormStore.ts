@@ -10,7 +10,6 @@ export interface ImportFormData {
   phoneId: string;
   importDate: Date;
   phoneType: string;
-  totalQuantity: number;
   quantity: number;
   imei: string;
   color: string;
@@ -24,7 +23,6 @@ const initialFormData: ImportFormData = {
   phoneId: "",
   importDate: new Date(),
   phoneType: "",
-  totalQuantity: 0,
   quantity: 0,
   imei: "",
   color: "",
