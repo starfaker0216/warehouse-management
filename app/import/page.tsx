@@ -7,8 +7,10 @@ import { getPhones, Phone, updatePhone } from "../../lib/phoneService";
 import {
   getColors,
   addColor,
+  colorExists,
   getSuppliers,
-  addSupplier
+  addSupplier,
+  supplierExists
 } from "../../lib/configService";
 import { useAuth } from "../../contexts/AuthContext";
 import PhoneSelector from "../../components/PhoneSelector";
@@ -99,60 +101,131 @@ export default function ImportPage() {
     setError(null);
     setLoading(true);
 
+    // Log với nhiều cách để đảm bảo thấy được
+    if (!formData.color || !formData.color.trim()) {
+      toast.error("Vui lòng chọn màu sắc!");
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.supplier || !formData.supplier.trim()) {
+      toast.error("Vui lòng chọn nhà cung cấp!");
+      setLoading(false);
+      return;
+    }
+
     try {
-      // Add new color if needed
-      if (showAddColor && newColor.trim()) {
-        await addColor(newColor.trim());
-        setColors([...colors, newColor.trim()]);
-        setFormData({ ...formData, color: newColor.trim() });
-        setNewColor("");
-        setShowAddColor(false);
+      // Nếu đang ở chế độ thêm mới và có giá trị newColor, sử dụng newColor
+      const colorName =
+        showAddColor && newColor.trim()
+          ? newColor.trim()
+          : formData.color?.trim() || "";
+
+      // Nếu đang ở chế độ thêm mới và có giá trị newSupplier, sử dụng newSupplier
+      const supplierName =
+        showAddSupplier && newSupplier.trim()
+          ? newSupplier.trim()
+          : formData.supplier?.trim() || "";
+
+      // Cập nhật formData với giá trị mới nhất trước khi lưu
+      const updatedFormData = {
+        ...formData,
+        color: colorName,
+        supplier: supplierName
+      };
+
+      // Xử lý color: thêm vào collection nếu chưa có
+      if (colorName) {
+        try {
+          // Kiểm tra và thêm color vào collection nếu chưa có
+          const colorAlreadyExists = await colorExists(colorName);
+
+          if (!colorAlreadyExists) {
+            await addColor(colorName);
+
+            // Reload danh sách colors
+            const updatedColors = await getColors();
+            setColors(updatedColors);
+          }
+        } catch (colorError) {
+          console.error("Error processing color:", colorError);
+          // Không throw error để không block việc lưu import record
+        }
+
+        // Reset trạng thái thêm mới
+        if (showAddColor && newColor.trim()) {
+          setNewColor("");
+          setShowAddColor(false);
+        }
       }
 
-      // Add new supplier if needed
-      if (showAddSupplier && newSupplier.trim()) {
-        await addSupplier(newSupplier.trim());
-        setSuppliers([...suppliers, newSupplier.trim()]);
-        setFormData({ ...formData, supplier: newSupplier.trim() });
-        setNewSupplier("");
-        setShowAddSupplier(false);
+      // Xử lý supplier: thêm vào collection nếu chưa có
+      if (supplierName) {
+        try {
+          // Kiểm tra và thêm supplier vào collection nếu chưa có
+          const supplierAlreadyExists = await supplierExists(supplierName);
+
+          if (!supplierAlreadyExists) {
+            await addSupplier(supplierName);
+
+            // Reload danh sách suppliers
+            const updatedSuppliers = await getSuppliers();
+            setSuppliers(updatedSuppliers);
+          }
+        } catch (supplierError) {
+          console.error("Error processing supplier:", supplierError);
+          // Không throw error để không block việc lưu import record
+        }
+
+        // Reset trạng thái thêm mới
+        if (showAddSupplier && newSupplier.trim()) {
+          setNewSupplier("");
+          setShowAddSupplier(false);
+        }
       }
 
-      // Lưu phiếu nhập hàng
-      await addImportRecord(formData);
+      // Lưu phiếu nhập hàng với formData đã được cập nhật
+      await addImportRecord(updatedFormData);
 
       // Cập nhật phone tương ứng
-      if (formData.phoneId && formData.color && formData.quantity > 0) {
-        const selectedPhone = phones.find((p) => p.id === formData.phoneId);
+      if (
+        updatedFormData.phoneId &&
+        updatedFormData.color &&
+        updatedFormData.quantity > 0
+      ) {
+        const selectedPhone = phones.find(
+          (p) => p.id === updatedFormData.phoneId
+        );
         if (selectedPhone) {
           // Tạo bản sao của data array
           const updatedData = [...selectedPhone.data];
 
           // Tìm item có cùng màu
           const colorIndex = updatedData.findIndex(
-            (item) => item.color === formData.color
+            (item) => item.color === updatedFormData.color
           );
 
           if (colorIndex >= 0) {
             // Nếu đã có màu này, cộng thêm quantity
             updatedData[colorIndex] = {
               ...updatedData[colorIndex],
-              quantity: updatedData[colorIndex].quantity + formData.quantity
+              quantity:
+                updatedData[colorIndex].quantity + updatedFormData.quantity
             };
           } else {
             // Nếu chưa có màu này, thêm item mới
             updatedData.push({
-              color: formData.color,
-              quantity: formData.quantity
+              color: updatedFormData.color,
+              quantity: updatedFormData.quantity
             });
           }
 
           // Tính totalQuantity mới
           const newTotalQuantity =
-            selectedPhone.totalQuantity + formData.quantity;
+            selectedPhone.totalQuantity + updatedFormData.quantity;
 
           // Cập nhật phone
-          await updatePhone(formData.phoneId, {
+          await updatePhone(updatedFormData.phoneId, {
             data: updatedData,
             totalQuantity: newTotalQuantity
           });
@@ -450,8 +523,14 @@ export default function ImportPage() {
                     <div className="flex gap-2">
                       <input
                         type="text"
+                        required
                         value={newColor}
-                        onChange={(e) => setNewColor(e.target.value)}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setNewColor(value);
+                          // Cập nhật formData.color ngay khi nhập
+                          setFormData({ ...formData, color: value });
+                        }}
                         placeholder="Nhập màu mới"
                         className="flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
                       />
@@ -460,6 +539,7 @@ export default function ImportPage() {
                         onClick={() => {
                           setShowAddColor(false);
                           setNewColor("");
+                          setFormData({ ...formData, color: "" });
                         }}
                         className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
                       >
@@ -697,8 +777,14 @@ export default function ImportPage() {
                     <div className="flex gap-2">
                       <input
                         type="text"
+                        required
                         value={newSupplier}
-                        onChange={(e) => setNewSupplier(e.target.value)}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setNewSupplier(value);
+                          // Cập nhật formData.supplier ngay khi nhập
+                          setFormData({ ...formData, supplier: value });
+                        }}
                         placeholder="Nhập nhà cung cấp mới"
                         className="flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
                       />
@@ -707,6 +793,7 @@ export default function ImportPage() {
                         onClick={() => {
                           setShowAddSupplier(false);
                           setNewSupplier("");
+                          setFormData({ ...formData, supplier: "" });
                         }}
                         className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
                       >

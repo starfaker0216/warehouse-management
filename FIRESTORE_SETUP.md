@@ -70,6 +70,7 @@ Sau khi tạo database, các collections sau sẽ được tạo tự động kh
 - `employees` - Lưu thông tin nhân viên
 - `phones` - Lưu thông tin điện thoại
 - `imports` - Lưu phiếu nhập hàng
-- `config` - Lưu cấu hình (colors, suppliers)
+- `colors` - Lưu danh sách màu sắc
+- `suppliers` - Lưu danh sách nhà cung cấp
 
 Bạn không cần tạo các collections này thủ công, chúng sẽ được tạo tự động khi có dữ liệu đầu tiên.

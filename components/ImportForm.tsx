@@ -6,8 +6,10 @@ import { getPhones, Phone } from "../lib/phoneService";
 import {
   getColors,
   addColor,
+  colorExists,
   getSuppliers,
-  addSupplier
+  addSupplier,
+  supplierExists
 } from "../lib/configService";
 
 interface ImportFormProps {
@@ -74,22 +76,52 @@ export default function ImportForm({
     setLoading(true);
 
     try {
-      // Add new color if needed
-      if (showAddColor && newColor.trim()) {
-        await addColor(newColor.trim());
-        setColors([...colors, newColor.trim()]);
-        setFormData({ ...formData, color: newColor.trim() });
-        setNewColor("");
-        setShowAddColor(false);
+      // Xử lý color: thêm vào collection nếu chưa có
+      if (formData.color.trim()) {
+        const colorName =
+          showAddColor && newColor.trim()
+            ? newColor.trim()
+            : formData.color.trim();
+
+        // Kiểm tra và thêm color vào collection nếu chưa có
+        const colorAlreadyExists = await colorExists(colorName);
+        if (!colorAlreadyExists) {
+          await addColor(colorName);
+          // Reload danh sách colors
+          const updatedColors = await getColors();
+          setColors(updatedColors);
+        }
+
+        // Cập nhật formData với color đúng
+        if (showAddColor && newColor.trim()) {
+          setFormData({ ...formData, color: colorName });
+          setNewColor("");
+          setShowAddColor(false);
+        }
       }
 
-      // Add new supplier if needed
-      if (showAddSupplier && newSupplier.trim()) {
-        await addSupplier(newSupplier.trim());
-        setSuppliers([...suppliers, newSupplier.trim()]);
-        setFormData({ ...formData, supplier: newSupplier.trim() });
-        setNewSupplier("");
-        setShowAddSupplier(false);
+      // Xử lý supplier: thêm vào collection nếu chưa có
+      if (formData.supplier.trim()) {
+        const supplierName =
+          showAddSupplier && newSupplier.trim()
+            ? newSupplier.trim()
+            : formData.supplier.trim();
+
+        // Kiểm tra và thêm supplier vào collection nếu chưa có
+        const supplierAlreadyExists = await supplierExists(supplierName);
+        if (!supplierAlreadyExists) {
+          await addSupplier(supplierName);
+          // Reload danh sách suppliers
+          const updatedSuppliers = await getSuppliers();
+          setSuppliers(updatedSuppliers);
+        }
+
+        // Cập nhật formData với supplier đúng
+        if (showAddSupplier && newSupplier.trim()) {
+          setFormData({ ...formData, supplier: supplierName });
+          setNewSupplier("");
+          setShowAddSupplier(false);
+        }
       }
 
       await addImportRecord(formData);

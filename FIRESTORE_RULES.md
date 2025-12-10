@@ -54,6 +54,16 @@ service cloud.firestore {
     match /config/{document=**} {
       allow read, write: if true;
     }
+
+    // Cho phép đọc/ghi collection colors
+    match /colors/{colorId} {
+      allow read, write: if true;
+    }
+
+    // Cho phép đọc/ghi collection suppliers
+    match /suppliers/{supplierId} {
+      allow read, write: if true;
+    }
   }
 }
 ```
@@ -78,6 +88,14 @@ service cloud.firestore {
     }
 
     match /config/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /colors/{colorId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /suppliers/{supplierId} {
       allow read, write: if request.auth != null;
     }
   }
