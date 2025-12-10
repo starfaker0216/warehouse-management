@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../contexts/AuthContext";
 import { useExportFormStore } from "../../stores/useExportFormStore";
 import { usePhoneStore } from "../../stores/usePhoneStore";
 import PriceInput from "../../components/common/PriceInput";
-import { Toaster } from "react-hot-toast";
+import { Toaster, toast } from "react-hot-toast";
 import Loading from "../../components/common/Loading";
+import { getCustomerByPhone } from "../../lib/customerService";
 
 export default function ExportPage() {
   const router = useRouter();
@@ -36,6 +37,33 @@ export default function ExportPage() {
   // Get current phone for color options
   const currentPhone = phones.find((p) => p.id === formData.phoneId);
   const availableColors = currentPhone?.data || [];
+  const [isCheckingCustomer, setIsCheckingCustomer] = useState(false);
+
+  const handleCheckCustomer = async () => {
+    if (!formData.customerPhone || !formData.customerPhone.trim()) {
+      toast.error("Vui lòng nhập số điện thoại");
+      return;
+    }
+
+    setIsCheckingCustomer(true);
+    try {
+      const customer = await getCustomerByPhone(formData.customerPhone.trim());
+      if (customer) {
+        setFormData({ customerName: customer.name });
+        toast.success("Đã tìm thấy thông tin khách hàng");
+      } else {
+        toast("Khách hàng mới", {
+          icon: "ℹ️",
+          duration: 3000
+        });
+      }
+    } catch (error) {
+      console.error("Error checking customer:", error);
+      toast.error("Không thể kiểm tra thông tin khách hàng");
+    } finally {
+      setIsCheckingCustomer(false);
+    }
+  };
 
   // Fetch phones on mount
   useEffect(() => {
@@ -101,16 +129,28 @@ export default function ExportPage() {
                   Số điện thoại khách hàng{" "}
                   <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.customerPhone}
-                  onChange={(e) =>
-                    setFormData({ customerPhone: e.target.value })
-                  }
-                  placeholder="Nhập số điện thoại"
-                  className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    value={formData.customerPhone}
+                    onChange={(e) =>
+                      setFormData({ customerPhone: e.target.value })
+                    }
+                    placeholder="Nhập số điện thoại"
+                    className="flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCheckCustomer}
+                    disabled={
+                      isCheckingCustomer || !formData.customerPhone.trim()
+                    }
+                    className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-green-600 hover:bg-zinc-50 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-green-400 dark:hover:bg-zinc-700 dark:hover:text-green-300 dark:disabled:text-zinc-500"
+                  >
+                    {isCheckingCustomer ? "..." : "Kiểm Tra"}
+                  </button>
+                </div>
               </div>
 
               {/* Tên khách hàng */}

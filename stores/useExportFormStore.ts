@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { addExportRecord } from "../lib/exportService";
 import { updatePhone as updatePhoneService, Phone } from "../lib/phoneService";
+import { getCustomerByPhone, addCustomer } from "../lib/customerService";
 import { usePhoneStore } from "./usePhoneStore";
 import toast from "react-hot-toast";
 
@@ -150,6 +151,17 @@ export const useExportFormStore = create<ExportFormState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
+      // Check if customer exists, if not create new customer
+      const existingCustomer = await getCustomerByPhone(
+        formData.customerPhone.trim()
+      );
+      if (!existingCustomer) {
+        await addCustomer(
+          formData.customerPhone.trim(),
+          formData.customerName.trim()
+        );
+      }
+
       // Add export record
       await addExportRecord({
         customerPhone: formData.customerPhone.trim(),
