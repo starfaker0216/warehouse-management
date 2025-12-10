@@ -11,6 +11,7 @@ import {
   addSupplier
 } from "../../lib/configService";
 import { useAuth } from "../../contexts/AuthContext";
+import PhoneSelector from "../../components/PhoneSelector";
 
 export default function ImportPage() {
   const router = useRouter();
@@ -41,6 +42,9 @@ export default function ImportPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [showPhoneSelector, setShowPhoneSelector] = useState(false);
+  const [priceInputValue, setPriceInputValue] = useState<string>("");
+  const [isPriceFocused, setIsPriceFocused] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -67,6 +71,26 @@ export default function ImportPage() {
       setSuppliers(suppliersData);
     } catch (err) {
       console.error("Error loading data:", err);
+    }
+  };
+
+  const handlePhoneSelect = (phone: Phone) => {
+    setFormData({
+      ...formData,
+      phoneId: phone.id,
+      phoneType: phone.name
+    });
+  };
+
+  const handlePhoneAdded = async (newPhone: Phone) => {
+    // Add new phone to the list immediately
+    setPhones([...phones, newPhone]);
+    // Also reload to ensure consistency
+    try {
+      const phonesData = await getPhones();
+      setPhones(phonesData);
+    } catch (err) {
+      console.error("Error reloading phones:", err);
     }
   };
 
@@ -110,6 +134,7 @@ export default function ImportPage() {
         imeiType: "",
         note: ""
       });
+      setPriceInputValue("");
       // Redirect after 2 seconds
       setTimeout(() => {
         router.push("/");
@@ -127,6 +152,95 @@ export default function ImportPage() {
       style: "currency",
       currency: "VND"
     }).format(amount);
+  };
+
+  const formatCurrencyInput = (amount: number): string => {
+    if (amount === 0 || isNaN(amount)) return "";
+    // Format với dấu phẩy ngăn cách hàng nghìn
+    return amount.toLocaleString("vi-VN");
+  };
+
+  const parseCurrencyInput = (value: string): number => {
+    // Loại bỏ tất cả ký tự không phải số
+    const cleaned = value.replace(/[^\d]/g, "");
+    return cleaned ? parseFloat(cleaned) : 0;
+  };
+
+  const formatPriceSuggest = (value: number): string => {
+    if (value >= 1000000000) {
+      const billions = value / 1000000000;
+      // Làm tròn đến 2 chữ số thập phân, loại bỏ số 0 thừa, dùng dấu phẩy
+      const rounded = Math.round(billions * 100) / 100;
+      if (rounded % 1 === 0) {
+        return `${rounded}B`;
+      } else {
+        return `${rounded
+          .toFixed(2)
+          .replace(/\.?0+$/, "")
+          .replace(".", ",")}B`;
+      }
+    } else if (value >= 1000000) {
+      const millions = value / 1000000;
+      const rounded = Math.round(millions * 100) / 100;
+      if (rounded % 1 === 0) {
+        return `${rounded}M`;
+      } else {
+        return `${rounded
+          .toFixed(2)
+          .replace(/\.?0+$/, "")
+          .replace(".", ",")}M`;
+      }
+    } else if (value >= 1000) {
+      const thousands = value / 1000;
+      const rounded = Math.round(thousands * 100) / 100;
+      if (rounded % 1 === 0) {
+        return `${rounded}K`;
+      } else {
+        return `${rounded
+          .toFixed(2)
+          .replace(/\.?0+$/, "")
+          .replace(".", ",")}K`;
+      }
+    }
+    return value.toString();
+  };
+
+  const getPriceSuggests = (inputValue: string): number[] => {
+    const num = parseFloat(inputValue);
+    if (isNaN(num) || num <= 0) return [];
+
+    // Xác định số chữ số của số nhập vào (không tính phần thập phân)
+    const numStr = Math.floor(num).toString();
+    const numDigits = numStr.length;
+
+    // Xác định hệ số nhân ban đầu dựa trên số chữ số
+    let baseMultiplier: number;
+    if (numDigits === 1) {
+      // 1 chữ số: nhân với 1000, 10000, 100000, 1000000, 10000000
+      baseMultiplier = 1000;
+    } else if (numDigits === 2) {
+      // 2 chữ số: nhân với 1000, 10000, 100000, 1000000, 10000000
+      baseMultiplier = 1000;
+    } else if (numDigits === 3) {
+      // 3 chữ số: nhân với 100, 1000, 10000, 100000, 1000000
+      baseMultiplier = 100;
+    } else if (numDigits === 4) {
+      // 4 chữ số: nhân với 100, 1000, 10000, 100000, 1000000
+      baseMultiplier = 100;
+    } else {
+      // 5+ chữ số: nhân với 10, 100, 1000, 10000, 100000
+      baseMultiplier = 10;
+    }
+
+    // Tạo 5 giá trị suggest
+    const multipliers = [
+      baseMultiplier,
+      baseMultiplier * 10,
+      baseMultiplier * 100,
+      baseMultiplier * 1000,
+      baseMultiplier * 10000
+    ];
+    return multipliers.map((mult) => num * mult);
   };
 
   if (authLoading) {
@@ -175,7 +289,8 @@ export default function ImportPage() {
                 />
               </svg>
               <p className="text-sm font-medium text-green-800 dark:text-green-400">
-                Phiếu nhập hàng đã được tạo thành công! Đang chuyển về trang chủ...
+                Phiếu nhập hàng đã được tạo thành công! Đang chuyển về trang
+                chủ...
               </p>
             </div>
           </div>
@@ -196,40 +311,47 @@ export default function ImportPage() {
                 <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                   ID Máy <span className="text-red-500">*</span>
                 </label>
-                <select
-                  required
-                  value={formData.phoneId}
-                  onChange={(e) =>
-                    setFormData({ ...formData, phoneId: e.target.value })
-                  }
-                  className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
-                >
-                  <option value="">Chọn máy</option>
-                  {phones.map((phone) => (
-                    <option key={phone.id} value={phone.id}>
-                      {phone.name} - {phone.brand}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Ngày Nhập */}
-              <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Ngày Nhập <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={formData.importDate.toISOString().split("T")[0]}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      importDate: new Date(e.target.value)
-                    })
-                  }
-                  className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    value={
+                      formData.phoneId
+                        ? (() => {
+                            const selectedPhone = phones.find(
+                              (p) => p.id === formData.phoneId
+                            );
+                            return selectedPhone
+                              ? selectedPhone.model
+                              : formData.phoneId;
+                          })()
+                        : ""
+                    }
+                    onClick={() => setShowPhoneSelector(true)}
+                    readOnly
+                    placeholder="Chọn máy..."
+                    className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPhoneSelector(true)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
+                </div>
               </div>
 
               {/* Loại Máy */}
@@ -237,73 +359,39 @@ export default function ImportPage() {
                 <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                   Loại Máy <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.phoneType}
-                  onChange={(e) =>
-                    setFormData({ ...formData, phoneType: e.target.value })
-                  }
-                  placeholder="Ví dụ: Smartphone, Tablet..."
-                  className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
-                />
-              </div>
-
-              {/* Số Lượng Tổng */}
-              <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Số Lượng Tổng <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  value={formData.totalQuantity || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      totalQuantity: parseInt(e.target.value) || 0
-                    })
-                  }
-                  className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
-                />
-              </div>
-
-              {/* Số Lượng */}
-              <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Số Lượng <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  value={formData.quantity || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      quantity: parseInt(e.target.value) || 0
-                    })
-                  }
-                  className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
-                />
-              </div>
-
-              {/* IMEI */}
-              <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  IMEI <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.imei}
-                  onChange={(e) =>
-                    setFormData({ ...formData, imei: e.target.value })
-                  }
-                  placeholder="Nhập IMEI"
-                  className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    value={formData.phoneType}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phoneType: e.target.value })
+                    }
+                    onClick={() => setShowPhoneSelector(true)}
+                    readOnly
+                    placeholder="Chọn loại máy..."
+                    className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPhoneSelector(true)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
+                </div>
               </div>
 
               {/* Màu Sắc */}
@@ -361,31 +449,196 @@ export default function ImportPage() {
                 </div>
               </div>
 
+              {/* Số Lượng */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Số Lượng <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  value={formData.quantity || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      quantity: parseInt(e.target.value) || 0
+                    })
+                  }
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+              </div>
+
+              {/* IMEI */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  IMEI <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.imei}
+                  onChange={(e) =>
+                    setFormData({ ...formData, imei: e.target.value })
+                  }
+                  placeholder="Nhập IMEI"
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
+                />
+              </div>
+
+              {/* Loại IMEI */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Loại IMEI <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.imeiType}
+                  onChange={(e) =>
+                    setFormData({ ...formData, imeiType: e.target.value })
+                  }
+                  placeholder="Ví dụ: IMEI1, IMEI2, Dual IMEI..."
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
+                />
+              </div>
+
               {/* Giá Nhập */}
               <div>
                 <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                   Giá Nhập <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="number"
+                  type="text"
                   required
-                  min="0"
-                  step="1000"
-                  value={formData.importPrice || ""}
-                  onChange={(e) =>
+                  id="price-input"
+                  value={
+                    priceInputValue ||
+                    (formData.importPrice > 0
+                      ? formatCurrencyInput(formData.importPrice)
+                      : "")
+                  }
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Parse giá trị nhập vào (loại bỏ tất cả ký tự không phải số)
+                    const numValue = parseCurrencyInput(value);
+
+                    // Lưu số thuần vào formData
                     setFormData({
                       ...formData,
-                      importPrice: parseFloat(e.target.value) || 0
-                    })
-                  }
+                      importPrice: numValue
+                    });
+
+                    // Format lại và hiển thị trong input
+                    if (numValue > 0) {
+                      setPriceInputValue(formatCurrencyInput(numValue));
+                    } else {
+                      setPriceInputValue("");
+                    }
+                  }}
+                  onFocus={() => {
+                    setIsPriceFocused(true);
+                    // Khi focus, hiển thị giá trị đã format
+                    if (formData.importPrice > 0) {
+                      setPriceInputValue(
+                        formatCurrencyInput(formData.importPrice)
+                      );
+                    } else {
+                      setPriceInputValue("");
+                    }
+                  }}
+                  onBlur={() => {
+                    setIsPriceFocused(false);
+                    // Khi blur, format lại từ formData.importPrice
+                    if (formData.importPrice > 0) {
+                      setPriceInputValue(
+                        formatCurrencyInput(formData.importPrice)
+                      );
+                    } else {
+                      setPriceInputValue("");
+                    }
+                  }}
                   placeholder="0"
                   className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
                 />
-                {formData.importPrice > 0 && (
+                {formData.importPrice > 0 && !isPriceFocused && (
                   <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                     {formatCurrency(formData.importPrice)}
                   </p>
                 )}
+                {isPriceFocused &&
+                  priceInputValue &&
+                  parseCurrencyInput(priceInputValue) > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {getPriceSuggests(priceInputValue).map(
+                        (suggestValue, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onMouseDown={(e) => {
+                              // Ngăn input bị blur khi click button
+                              e.preventDefault();
+                            }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+
+                              // Cập nhật giá trị số vào formData
+                              setFormData({
+                                ...formData,
+                                importPrice: suggestValue
+                              });
+
+                              // Format và hiển thị giá trị trong input
+                              const formattedValue =
+                                formatCurrencyInput(suggestValue);
+                              setPriceInputValue(formattedValue);
+
+                              // Đảm bảo input vẫn focus để hiển thị giá trị đã format
+                              setIsPriceFocused(true);
+
+                              // Focus lại input sau khi click
+                              setTimeout(() => {
+                                const input = document.getElementById(
+                                  "price-input"
+                                ) as HTMLInputElement;
+                                if (input) {
+                                  input.focus();
+                                  // Đặt cursor ở cuối
+                                  input.setSelectionRange(
+                                    formattedValue.length,
+                                    formattedValue.length
+                                  );
+                                }
+                              }, 0);
+                            }}
+                            className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 hover:border-blue-500 hover:text-blue-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors"
+                          >
+                            {formatPriceSuggest(suggestValue)}
+                          </button>
+                        )
+                      )}
+                    </div>
+                  )}
+              </div>
+
+              {/* Ngày Nhập */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Ngày Nhập <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={formData.importDate.toISOString().split("T")[0]}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      importDate: new Date(e.target.value)
+                    })
+                  }
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
+                />
               </div>
 
               {/* Nhà Cung Cấp */}
@@ -443,23 +696,6 @@ export default function ImportPage() {
                 </div>
               </div>
 
-              {/* Loại IMEI */}
-              <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Loại IMEI <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.imeiType}
-                  onChange={(e) =>
-                    setFormData({ ...formData, imeiType: e.target.value })
-                  }
-                  placeholder="Ví dụ: IMEI1, IMEI2, Dual IMEI..."
-                  className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
-                />
-              </div>
-
               {/* Ghi Chú */}
               <div className="md:col-span-2">
                 <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
@@ -496,7 +732,15 @@ export default function ImportPage() {
           </form>
         </div>
       </div>
+
+      {/* Phone Selector Modal */}
+      <PhoneSelector
+        isOpen={showPhoneSelector}
+        onClose={() => setShowPhoneSelector(false)}
+        onSelect={handlePhoneSelect}
+        phones={phones}
+        onPhoneAdded={handlePhoneAdded}
+      />
     </div>
   );
 }
-
