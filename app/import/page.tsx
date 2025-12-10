@@ -1,366 +1,44 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { addImportRecord, ImportRecord } from "../../lib/importService";
-import { getPhones, Phone, updatePhone } from "../../lib/phoneService";
-import {
-  getColors,
-  addColor,
-  colorExists,
-  getSuppliers,
-  addSupplier,
-  supplierExists
-} from "../../lib/configService";
-import { useAuth } from "../../contexts/AuthContext";
+import { useImportForm } from "../../hooks/useImportForm";
 import PhoneSelector from "../../components/PhoneSelector";
-import toast, { Toaster } from "react-hot-toast";
+import PhoneSelectorField from "../../components/import/PhoneSelectorField";
+import ColorSelectorField from "../../components/import/ColorSelectorField";
+import SupplierSelectorField from "../../components/import/SupplierSelectorField";
+import PriceInputField from "../../components/import/PriceInputField";
+import { Toaster } from "react-hot-toast";
 
 export default function ImportPage() {
   const router = useRouter();
-  const { isAuthenticated, loading: authLoading } = useAuth();
-  const [formData, setFormData] = useState<
-    Omit<ImportRecord, "id" | "createdAt" | "updatedAt">
-  >({
-    phoneId: "",
-    importDate: new Date(),
-    phoneType: "",
-    totalQuantity: 0,
-    quantity: 0,
-    imei: "",
-    color: "",
-    importPrice: 0,
-    supplier: "",
-    imeiType: "",
-    note: ""
-  });
-
-  const [phones, setPhones] = useState<Phone[]>([]);
-  const [colors, setColors] = useState<string[]>([]);
-  const [suppliers, setSuppliers] = useState<string[]>([]);
-  const [newColor, setNewColor] = useState("");
-  const [newSupplier, setNewSupplier] = useState("");
-  const [showAddColor, setShowAddColor] = useState(false);
-  const [showAddSupplier, setShowAddSupplier] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [showPhoneSelector, setShowPhoneSelector] = useState(false);
-  const [priceInputValue, setPriceInputValue] = useState<string>("");
-  const [isPriceFocused, setIsPriceFocused] = useState(false);
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push("/login");
-    }
-  }, [authLoading, isAuthenticated, router]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadData();
-    }
-  }, [isAuthenticated]);
-
-  const loadData = async () => {
-    try {
-      const [phonesData, colorsData, suppliersData] = await Promise.all([
-        getPhones(),
-        getColors(),
-        getSuppliers()
-      ]);
-      setPhones(phonesData);
-      setColors(colorsData);
-      setSuppliers(suppliersData);
-    } catch (err) {
-      console.error("Error loading data:", err);
-    }
-  };
-
-  const handlePhoneSelect = (phone: Phone) => {
-    setFormData({
-      ...formData,
-      phoneId: phone.id,
-      phoneType: phone.name
-    });
-  };
-
-  const handlePhoneAdded = async (newPhone: Phone) => {
-    // Add new phone to the list immediately
-    setPhones([...phones, newPhone]);
-    // Also reload to ensure consistency
-    try {
-      const phonesData = await getPhones();
-      setPhones(phonesData);
-    } catch (err) {
-      console.error("Error reloading phones:", err);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-
-    // Log với nhiều cách để đảm bảo thấy được
-    if (!formData.color || !formData.color.trim()) {
-      toast.error("Vui lòng chọn màu sắc!");
-      setLoading(false);
-      return;
-    }
-
-    if (!formData.supplier || !formData.supplier.trim()) {
-      toast.error("Vui lòng chọn nhà cung cấp!");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      // Nếu đang ở chế độ thêm mới và có giá trị newColor, sử dụng newColor
-      const colorName =
-        showAddColor && newColor.trim()
-          ? newColor.trim()
-          : formData.color?.trim() || "";
-
-      // Nếu đang ở chế độ thêm mới và có giá trị newSupplier, sử dụng newSupplier
-      const supplierName =
-        showAddSupplier && newSupplier.trim()
-          ? newSupplier.trim()
-          : formData.supplier?.trim() || "";
-
-      // Cập nhật formData với giá trị mới nhất trước khi lưu
-      const updatedFormData = {
-        ...formData,
-        color: colorName,
-        supplier: supplierName
-      };
-
-      // Xử lý color: thêm vào collection nếu chưa có
-      if (colorName) {
-        try {
-          // Kiểm tra và thêm color vào collection nếu chưa có
-          const colorAlreadyExists = await colorExists(colorName);
-
-          if (!colorAlreadyExists) {
-            await addColor(colorName);
-
-            // Reload danh sách colors
-            const updatedColors = await getColors();
-            setColors(updatedColors);
-          }
-        } catch (colorError) {
-          console.error("Error processing color:", colorError);
-          // Không throw error để không block việc lưu import record
-        }
-
-        // Reset trạng thái thêm mới
-        if (showAddColor && newColor.trim()) {
-          setNewColor("");
-          setShowAddColor(false);
-        }
-      }
-
-      // Xử lý supplier: thêm vào collection nếu chưa có
-      if (supplierName) {
-        try {
-          // Kiểm tra và thêm supplier vào collection nếu chưa có
-          const supplierAlreadyExists = await supplierExists(supplierName);
-
-          if (!supplierAlreadyExists) {
-            await addSupplier(supplierName);
-
-            // Reload danh sách suppliers
-            const updatedSuppliers = await getSuppliers();
-            setSuppliers(updatedSuppliers);
-          }
-        } catch (supplierError) {
-          console.error("Error processing supplier:", supplierError);
-          // Không throw error để không block việc lưu import record
-        }
-
-        // Reset trạng thái thêm mới
-        if (showAddSupplier && newSupplier.trim()) {
-          setNewSupplier("");
-          setShowAddSupplier(false);
-        }
-      }
-
-      // Lưu phiếu nhập hàng với formData đã được cập nhật
-      await addImportRecord(updatedFormData);
-
-      // Cập nhật phone tương ứng
-      if (
-        updatedFormData.phoneId &&
-        updatedFormData.color &&
-        updatedFormData.quantity > 0
-      ) {
-        const selectedPhone = phones.find(
-          (p) => p.id === updatedFormData.phoneId
-        );
-        if (selectedPhone) {
-          // Tạo bản sao của data array
-          const updatedData = [...selectedPhone.data];
-
-          // Tìm item có cùng màu
-          const colorIndex = updatedData.findIndex(
-            (item) => item.color === updatedFormData.color
-          );
-
-          if (colorIndex >= 0) {
-            // Nếu đã có màu này, cộng thêm quantity
-            updatedData[colorIndex] = {
-              ...updatedData[colorIndex],
-              quantity:
-                updatedData[colorIndex].quantity + updatedFormData.quantity
-            };
-          } else {
-            // Nếu chưa có màu này, thêm item mới
-            updatedData.push({
-              color: updatedFormData.color,
-              quantity: updatedFormData.quantity
-            });
-          }
-
-          // Tính totalQuantity mới
-          const newTotalQuantity =
-            selectedPhone.totalQuantity + updatedFormData.quantity;
-
-          // Cập nhật phone
-          await updatePhone(updatedFormData.phoneId, {
-            data: updatedData,
-            totalQuantity: newTotalQuantity
-          });
-
-          // Reload danh sách phones để cập nhật UI
-          const updatedPhones = await getPhones();
-          setPhones(updatedPhones);
-        }
-      }
-
-      // Reset form
-      setFormData({
-        phoneId: "",
-        importDate: new Date(),
-        phoneType: "",
-        totalQuantity: 0,
-        quantity: 0,
-        imei: "",
-        color: "",
-        importPrice: 0,
-        supplier: "",
-        imeiType: "",
-        note: ""
-      });
-      setPriceInputValue("");
-      setShowAddColor(false);
-      setShowAddSupplier(false);
-      setNewColor("");
-      setNewSupplier("");
-
-      // Hiển thị toast thông báo thành công
-      toast.success("Phiếu nhập hàng đã được tạo thành công!");
-    } catch (err) {
-      console.error("Error adding import record:", err);
-      setError("Không thể thêm phiếu nhập hàng. Vui lòng thử lại.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND"
-    }).format(amount);
-  };
-
-  const formatCurrencyInput = (amount: number): string => {
-    if (amount === 0 || isNaN(amount)) return "";
-    // Format với dấu phẩy ngăn cách hàng nghìn
-    return amount.toLocaleString("vi-VN");
-  };
-
-  const parseCurrencyInput = (value: string): number => {
-    // Loại bỏ tất cả ký tự không phải số
-    const cleaned = value.replace(/[^\d]/g, "");
-    return cleaned ? parseFloat(cleaned) : 0;
-  };
-
-  const formatPriceSuggest = (value: number): string => {
-    if (value >= 1000000000) {
-      const billions = value / 1000000000;
-      // Làm tròn đến 2 chữ số thập phân, loại bỏ số 0 thừa, dùng dấu phẩy
-      const rounded = Math.round(billions * 100) / 100;
-      if (rounded % 1 === 0) {
-        return `${rounded}B`;
-      } else {
-        return `${rounded
-          .toFixed(2)
-          .replace(/\.?0+$/, "")
-          .replace(".", ",")}B`;
-      }
-    } else if (value >= 1000000) {
-      const millions = value / 1000000;
-      const rounded = Math.round(millions * 100) / 100;
-      if (rounded % 1 === 0) {
-        return `${rounded}M`;
-      } else {
-        return `${rounded
-          .toFixed(2)
-          .replace(/\.?0+$/, "")
-          .replace(".", ",")}M`;
-      }
-    } else if (value >= 1000) {
-      const thousands = value / 1000;
-      const rounded = Math.round(thousands * 100) / 100;
-      if (rounded % 1 === 0) {
-        return `${rounded}K`;
-      } else {
-        return `${rounded
-          .toFixed(2)
-          .replace(/\.?0+$/, "")
-          .replace(".", ",")}K`;
-      }
-    }
-    return value.toString();
-  };
-
-  const getPriceSuggests = (inputValue: string): number[] => {
-    const num = parseFloat(inputValue);
-    if (isNaN(num) || num <= 0) return [];
-
-    // Xác định số chữ số của số nhập vào (không tính phần thập phân)
-    const numStr = Math.floor(num).toString();
-    const numDigits = numStr.length;
-
-    // Xác định hệ số nhân ban đầu dựa trên số chữ số
-    let baseMultiplier: number;
-    if (numDigits === 1) {
-      // 1 chữ số: nhân với 1000, 10000, 100000, 1000000, 10000000
-      baseMultiplier = 1000;
-    } else if (numDigits === 2) {
-      // 2 chữ số: nhân với 1000, 10000, 100000, 1000000, 10000000
-      baseMultiplier = 1000;
-    } else if (numDigits === 3) {
-      // 3 chữ số: nhân với 100, 1000, 10000, 100000, 1000000
-      baseMultiplier = 100;
-    } else if (numDigits === 4) {
-      // 4 chữ số: nhân với 100, 1000, 10000, 100000, 1000000
-      baseMultiplier = 100;
-    } else {
-      // 5+ chữ số: nhân với 10, 100, 1000, 10000, 100000
-      baseMultiplier = 10;
-    }
-
-    // Tạo 5 giá trị suggest
-    const multipliers = [
-      baseMultiplier,
-      baseMultiplier * 10,
-      baseMultiplier * 100,
-      baseMultiplier * 1000,
-      baseMultiplier * 10000
-    ];
-    return multipliers.map((mult) => num * mult);
-  };
+  const {
+    formData,
+    setFormData,
+    phones,
+    colors,
+    suppliers,
+    newColor,
+    setNewColor,
+    newSupplier,
+    setNewSupplier,
+    showAddColor,
+    setShowAddColor,
+    showAddSupplier,
+    setShowAddSupplier,
+    loading,
+    error,
+    showPhoneSelector,
+    setShowPhoneSelector,
+    priceInputValue,
+    setPriceInputValue,
+    isPriceFocused,
+    setIsPriceFocused,
+    authLoading,
+    isAuthenticated,
+    handlePhoneSelect,
+    handlePhoneAdded,
+    handleSubmit
+  } = useImportForm();
 
   if (authLoading) {
     return (
@@ -400,155 +78,24 @@ export default function ImportPage() {
             )}
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              {/* ID Máy */}
-              <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  ID Máy <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    required
-                    value={
-                      formData.phoneId
-                        ? (() => {
-                            const selectedPhone = phones.find(
-                              (p) => p.id === formData.phoneId
-                            );
-                            return selectedPhone
-                              ? selectedPhone.model
-                              : formData.phoneId;
-                          })()
-                        : ""
-                    }
-                    onClick={() => setShowPhoneSelector(true)}
-                    readOnly
-                    placeholder="Chọn máy..."
-                    className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPhoneSelector(true)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
+              {/* Phone Selector Fields */}
+              <PhoneSelectorField
+                phones={phones}
+                phoneId={formData.phoneId}
+                phoneType={formData.phoneType}
+                onOpenSelector={() => setShowPhoneSelector(true)}
+              />
 
-              {/* Loại Máy */}
-              <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Loại Máy <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    required
-                    value={formData.phoneType}
-                    onChange={(e) =>
-                      setFormData({ ...formData, phoneType: e.target.value })
-                    }
-                    onClick={() => setShowPhoneSelector(true)}
-                    readOnly
-                    placeholder="Chọn loại máy..."
-                    className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPhoneSelector(true)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
-              {/* Màu Sắc */}
-              <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Màu Sắc <span className="text-red-500">*</span>
-                </label>
-                <div className="space-y-2">
-                  {!showAddColor ? (
-                    <div className="flex gap-2">
-                      <select
-                        required
-                        value={formData.color}
-                        onChange={(e) =>
-                          setFormData({ ...formData, color: e.target.value })
-                        }
-                        className="flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
-                      >
-                        <option value="">Chọn màu</option>
-                        {colors.map((color) => (
-                          <option key={color} value={color}>
-                            {color}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => setShowAddColor(true)}
-                        className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-                      >
-                        + Mới
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        required
-                        value={newColor}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setNewColor(value);
-                          // Cập nhật formData.color ngay khi nhập
-                          setFormData({ ...formData, color: value });
-                        }}
-                        placeholder="Nhập màu mới"
-                        className="flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowAddColor(false);
-                          setNewColor("");
-                          setFormData({ ...formData, color: "" });
-                        }}
-                        className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-                      >
-                        Hủy
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
+              {/* Color Selector */}
+              <ColorSelectorField
+                colors={colors}
+                selectedColor={formData.color}
+                newColor={newColor}
+                showAddColor={showAddColor}
+                onColorChange={(color) => setFormData({ ...formData, color })}
+                onNewColorChange={setNewColor}
+                onShowAddColor={setShowAddColor}
+              />
 
               {/* Số Lượng */}
               <div>
@@ -604,124 +151,17 @@ export default function ImportPage() {
                 />
               </div>
 
-              {/* Giá Nhập */}
-              <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Giá Nhập <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  id="price-input"
-                  value={
-                    priceInputValue ||
-                    (formData.importPrice > 0
-                      ? formatCurrencyInput(formData.importPrice)
-                      : "")
-                  }
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    // Parse giá trị nhập vào (loại bỏ tất cả ký tự không phải số)
-                    const numValue = parseCurrencyInput(value);
-
-                    // Lưu số thuần vào formData
-                    setFormData({
-                      ...formData,
-                      importPrice: numValue
-                    });
-
-                    // Format lại và hiển thị trong input
-                    if (numValue > 0) {
-                      setPriceInputValue(formatCurrencyInput(numValue));
-                    } else {
-                      setPriceInputValue("");
-                    }
-                  }}
-                  onFocus={() => {
-                    setIsPriceFocused(true);
-                    // Khi focus, hiển thị giá trị đã format
-                    if (formData.importPrice > 0) {
-                      setPriceInputValue(
-                        formatCurrencyInput(formData.importPrice)
-                      );
-                    } else {
-                      setPriceInputValue("");
-                    }
-                  }}
-                  onBlur={() => {
-                    setIsPriceFocused(false);
-                    // Khi blur, format lại từ formData.importPrice
-                    if (formData.importPrice > 0) {
-                      setPriceInputValue(
-                        formatCurrencyInput(formData.importPrice)
-                      );
-                    } else {
-                      setPriceInputValue("");
-                    }
-                  }}
-                  placeholder="0"
-                  className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
-                />
-                {formData.importPrice > 0 && !isPriceFocused && (
-                  <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                    {formatCurrency(formData.importPrice)}
-                  </p>
-                )}
-                {isPriceFocused &&
-                  priceInputValue &&
-                  parseCurrencyInput(priceInputValue) > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {getPriceSuggests(priceInputValue).map(
-                        (suggestValue, index) => (
-                          <button
-                            key={index}
-                            type="button"
-                            onMouseDown={(e) => {
-                              // Ngăn input bị blur khi click button
-                              e.preventDefault();
-                            }}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-
-                              // Cập nhật giá trị số vào formData
-                              setFormData({
-                                ...formData,
-                                importPrice: suggestValue
-                              });
-
-                              // Format và hiển thị giá trị trong input
-                              const formattedValue =
-                                formatCurrencyInput(suggestValue);
-                              setPriceInputValue(formattedValue);
-
-                              // Đảm bảo input vẫn focus để hiển thị giá trị đã format
-                              setIsPriceFocused(true);
-
-                              // Focus lại input sau khi click
-                              setTimeout(() => {
-                                const input = document.getElementById(
-                                  "price-input"
-                                ) as HTMLInputElement;
-                                if (input) {
-                                  input.focus();
-                                  // Đặt cursor ở cuối
-                                  input.setSelectionRange(
-                                    formattedValue.length,
-                                    formattedValue.length
-                                  );
-                                }
-                              }, 0);
-                            }}
-                            className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 hover:border-blue-500 hover:text-blue-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors"
-                          >
-                            {formatPriceSuggest(suggestValue)}
-                          </button>
-                        )
-                      )}
-                    </div>
-                  )}
-              </div>
+              {/* Price Input */}
+              <PriceInputField
+                importPrice={formData.importPrice}
+                priceInputValue={priceInputValue}
+                isPriceFocused={isPriceFocused}
+                onPriceChange={(price) =>
+                  setFormData({ ...formData, importPrice: price })
+                }
+                onPriceInputValueChange={setPriceInputValue}
+                onPriceFocus={setIsPriceFocused}
+              />
 
               {/* Ngày Nhập */}
               <div>
@@ -742,67 +182,18 @@ export default function ImportPage() {
                 />
               </div>
 
-              {/* Nhà Cung Cấp */}
-              <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Nhà Cung Cấp <span className="text-red-500">*</span>
-                </label>
-                <div className="space-y-2">
-                  {!showAddSupplier ? (
-                    <div className="flex gap-2">
-                      <select
-                        required
-                        value={formData.supplier}
-                        onChange={(e) =>
-                          setFormData({ ...formData, supplier: e.target.value })
-                        }
-                        className="flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
-                      >
-                        <option value="">Chọn nhà cung cấp</option>
-                        {suppliers.map((supplier) => (
-                          <option key={supplier} value={supplier}>
-                            {supplier}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => setShowAddSupplier(true)}
-                        className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-                      >
-                        + Mới
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        required
-                        value={newSupplier}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setNewSupplier(value);
-                          // Cập nhật formData.supplier ngay khi nhập
-                          setFormData({ ...formData, supplier: value });
-                        }}
-                        placeholder="Nhập nhà cung cấp mới"
-                        className="flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowAddSupplier(false);
-                          setNewSupplier("");
-                          setFormData({ ...formData, supplier: "" });
-                        }}
-                        className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-                      >
-                        Hủy
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
+              {/* Supplier Selector */}
+              <SupplierSelectorField
+                suppliers={suppliers}
+                selectedSupplier={formData.supplier}
+                newSupplier={newSupplier}
+                showAddSupplier={showAddSupplier}
+                onSupplierChange={(supplier) =>
+                  setFormData({ ...formData, supplier })
+                }
+                onNewSupplierChange={setNewSupplier}
+                onShowAddSupplier={setShowAddSupplier}
+              />
 
               {/* Ghi Chú */}
               <div className="md:col-span-2">
