@@ -156,7 +156,9 @@ export default function PhoneTable({
                         <div key={index} className="text-xs">
                           <span className="font-medium">{item.color}:</span>{" "}
                           <span className="text-zinc-600 dark:text-zinc-400">
-                            {formatCurrency(item.price || 0)}
+                            {!item.price || item.price === 0
+                              ? "Liên hệ Admin"
+                              : formatCurrency(item.price)}
                           </span>
                         </div>
                       ))}
