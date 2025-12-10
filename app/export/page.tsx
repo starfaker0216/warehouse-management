@@ -94,10 +94,6 @@ export default function ExportPage() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await handleSubmit();
-    // Navigate back to home after successful submit
-    if (!error) {
-      router.push("/");
-    }
   };
 
   return (
