@@ -112,3 +112,4 @@ export const getPriceSuggests = (inputValue: string): number[] => {
   ];
   return multipliers.map((mult) => num * mult);
 };
+
