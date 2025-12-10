@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { addImportRecord, ImportRecord } from "../../lib/importService";
-import { getPhones, Phone } from "../../lib/phoneService";
+import { getPhones, Phone, updatePhone } from "../../lib/phoneService";
 import {
   getColors,
   addColor,
@@ -12,6 +12,7 @@ import {
 } from "../../lib/configService";
 import { useAuth } from "../../contexts/AuthContext";
 import PhoneSelector from "../../components/PhoneSelector";
+import toast, { Toaster } from "react-hot-toast";
 
 export default function ImportPage() {
   const router = useRouter();
@@ -41,7 +42,6 @@ export default function ImportPage() {
   const [showAddSupplier, setShowAddSupplier] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   const [showPhoneSelector, setShowPhoneSelector] = useState(false);
   const [priceInputValue, setPriceInputValue] = useState<string>("");
   const [isPriceFocused, setIsPriceFocused] = useState(false);
@@ -118,8 +118,51 @@ export default function ImportPage() {
         setShowAddSupplier(false);
       }
 
+      // Lưu phiếu nhập hàng
       await addImportRecord(formData);
-      setSuccess(true);
+
+      // Cập nhật phone tương ứng
+      if (formData.phoneId && formData.color && formData.quantity > 0) {
+        const selectedPhone = phones.find((p) => p.id === formData.phoneId);
+        if (selectedPhone) {
+          // Tạo bản sao của data array
+          const updatedData = [...selectedPhone.data];
+
+          // Tìm item có cùng màu
+          const colorIndex = updatedData.findIndex(
+            (item) => item.color === formData.color
+          );
+
+          if (colorIndex >= 0) {
+            // Nếu đã có màu này, cộng thêm quantity
+            updatedData[colorIndex] = {
+              ...updatedData[colorIndex],
+              quantity: updatedData[colorIndex].quantity + formData.quantity
+            };
+          } else {
+            // Nếu chưa có màu này, thêm item mới
+            updatedData.push({
+              color: formData.color,
+              quantity: formData.quantity
+            });
+          }
+
+          // Tính totalQuantity mới
+          const newTotalQuantity =
+            selectedPhone.totalQuantity + formData.quantity;
+
+          // Cập nhật phone
+          await updatePhone(formData.phoneId, {
+            data: updatedData,
+            totalQuantity: newTotalQuantity
+          });
+
+          // Reload danh sách phones để cập nhật UI
+          const updatedPhones = await getPhones();
+          setPhones(updatedPhones);
+        }
+      }
+
       // Reset form
       setFormData({
         phoneId: "",
@@ -135,10 +178,13 @@ export default function ImportPage() {
         note: ""
       });
       setPriceInputValue("");
-      // Redirect after 2 seconds
-      setTimeout(() => {
-        router.push("/");
-      }, 2000);
+      setShowAddColor(false);
+      setShowAddSupplier(false);
+      setNewColor("");
+      setNewSupplier("");
+
+      // Hiển thị toast thông báo thành công
+      toast.success("Phiếu nhập hàng đã được tạo thành công!");
     } catch (err) {
       console.error("Error adding import record:", err);
       setError("Không thể thêm phiếu nhập hàng. Vui lòng thử lại.");
@@ -270,31 +316,6 @@ export default function ImportPage() {
             Thêm phiếu nhập hàng mới vào hệ thống
           </p>
         </div>
-
-        {/* Success Message */}
-        {success && (
-          <div className="mb-6 rounded-lg bg-green-50 p-4 dark:bg-green-900/20">
-            <div className="flex items-center gap-3">
-              <svg
-                className="h-5 w-5 text-green-600 dark:text-green-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              <p className="text-sm font-medium text-green-800 dark:text-green-400">
-                Phiếu nhập hàng đã được tạo thành công! Đang chuyển về trang
-                chủ...
-              </p>
-            </div>
-          </div>
-        )}
 
         {/* Form */}
         <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-zinc-900">
@@ -740,6 +761,20 @@ export default function ImportPage() {
         onSelect={handlePhoneSelect}
         phones={phones}
         onPhoneAdded={handlePhoneAdded}
+      />
+
+      {/* Toast Notification */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          success: {
+            iconTheme: {
+              primary: "#fff",
+              secondary: "#10b981"
+            }
+          }
+        }}
       />
     </div>
   );

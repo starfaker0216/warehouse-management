@@ -33,7 +33,6 @@ export default function PhoneSelector({
     return phones.filter(
       (phone) =>
         phone.name.toLowerCase().includes(query) ||
-        phone.brand.toLowerCase().includes(query) ||
         phone.model.toLowerCase().includes(query) ||
         phone.id.toLowerCase().includes(query)
     );
@@ -62,17 +61,15 @@ export default function PhoneSelector({
     try {
       const newPhoneData: Omit<Phone, "id" | "createdAt" | "updatedAt"> = {
         name: newPhoneName.trim(),
-        brand: "",
         model: newPhoneId.trim(), // Store custom ID in model field
-        color: "",
-        storage: "",
         price: 0,
-        quantity: 0,
+        data: [],
+        totalQuantity: 0,
         status: "out_of_stock"
       };
 
       const phoneId = await addPhone(newPhoneData);
-      
+
       // Create the new phone object
       const newPhone: Phone = {
         id: phoneId,
@@ -185,9 +182,9 @@ export default function PhoneSelector({
                     {phone.name}
                   </div>
                   <div className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                    {phone.brand && `${phone.brand} • `}
                     {phone.model && `ID: ${phone.model} • `}
-                    Firestore ID: {phone.id}
+                    Tổng số lượng: {phone.totalQuantity} • Firestore ID:{" "}
+                    {phone.id}
                   </div>
                 </button>
               ))}
@@ -243,4 +240,3 @@ export default function PhoneSelector({
     </div>
   );
 }
-

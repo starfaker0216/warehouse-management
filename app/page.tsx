@@ -12,7 +12,6 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterBrand, setFilterBrand] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
   // Load phones from Firestore
@@ -35,9 +34,12 @@ export default function Home() {
   }, []);
 
   // Calculate statistics
-  const totalPhones = phones.reduce((sum, phone) => sum + phone.quantity, 0);
+  const totalPhones = phones.reduce(
+    (sum, phone) => sum + phone.totalQuantity,
+    0
+  );
   const totalValue = phones.reduce(
-    (sum, phone) => sum + phone.price * phone.quantity,
+    (sum, phone) => sum + phone.price * phone.totalQuantity,
     0
   );
   const lowStockCount = phones.filter(
@@ -46,21 +48,16 @@ export default function Home() {
   const outOfStockCount = phones.filter(
     (phone) => phone.status === "out_of_stock"
   ).length;
-  const uniqueBrands = new Set(phones.map((phone) => phone.brand)).size;
 
   // Filter phones
   const filteredPhones = phones.filter((phone) => {
     const matchesSearch =
       phone.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      phone.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
       phone.model.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesBrand = filterBrand === "all" || phone.brand === filterBrand;
     const matchesStatus =
       filterStatus === "all" || phone.status === filterStatus;
-    return matchesSearch && matchesBrand && matchesStatus;
+    return matchesSearch && matchesStatus;
   });
-
-  const brands = Array.from(new Set(phones.map((phone) => phone.brand)));
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -183,7 +180,7 @@ export default function Home() {
         </div>
 
         {/* Statistics Cards */}
-        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-zinc-900">
             <div className="flex items-center justify-between">
               <div>
@@ -234,34 +231,6 @@ export default function Home() {
                     strokeLinejoin="round"
                     strokeWidth={2}
                     d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-zinc-900">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                  Số thương hiệu
-                </p>
-                <p className="mt-2 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-                  {uniqueBrands}
-                </p>
-              </div>
-              <div className="rounded-full bg-purple-100 p-3 dark:bg-purple-900/30">
-                <svg
-                  className="h-6 w-6 text-purple-600 dark:text-purple-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
                   />
                 </svg>
               </div>
@@ -331,24 +300,12 @@ export default function Home() {
             <div className="flex-1">
               <input
                 type="text"
-                placeholder="Tìm kiếm theo tên, thương hiệu, model..."
+                placeholder="Tìm kiếm theo tên, model..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
               />
             </div>
-            <select
-              value={filterBrand}
-              onChange={(e) => setFilterBrand(e.target.value)}
-              className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
-            >
-              <option value="all">Tất cả thương hiệu</option>
-              {brands.map((brand) => (
-                <option key={brand} value={brand}>
-                  {brand}
-                </option>
-              ))}
-            </select>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
@@ -372,19 +329,13 @@ export default function Home() {
                     Sản phẩm
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                    Thương hiệu
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                    Màu sắc
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                    Bộ nhớ
+                    Chi tiết màu sắc
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                     Giá
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                    Số lượng
+                    Tổng số lượng
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                     Trạng thái
@@ -395,7 +346,7 @@ export default function Home() {
                 {filteredPhones.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={5}
                       className="px-6 py-12 text-center text-sm text-zinc-500 dark:text-zinc-400"
                     >
                       Không tìm thấy sản phẩm nào
@@ -415,14 +366,25 @@ export default function Home() {
                           {phone.model}
                         </div>
                       </td>
-                      <td className="whitespace-nowrap px-6 py-4 text-sm text-zinc-900 dark:text-zinc-50">
-                        {phone.brand}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-4 text-sm text-zinc-900 dark:text-zinc-50">
-                        {phone.color}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-4 text-sm text-zinc-900 dark:text-zinc-50">
-                        {phone.storage}
+                      <td className="px-6 py-4 text-sm text-zinc-900 dark:text-zinc-50">
+                        {phone.data && phone.data.length > 0 ? (
+                          <div className="space-y-1">
+                            {phone.data.map((item, index) => (
+                              <div key={index} className="text-xs">
+                                <span className="font-medium">
+                                  {item.color}:
+                                </span>{" "}
+                                <span className="text-zinc-600 dark:text-zinc-400">
+                                  {item.quantity}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-zinc-400 dark:text-zinc-500">
+                            Chưa có dữ liệu
+                          </span>
+                        )}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-zinc-900 dark:text-zinc-50">
                         {formatCurrency(phone.price)}
@@ -430,14 +392,14 @@ export default function Home() {
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-zinc-900 dark:text-zinc-50">
                         <span
                           className={`font-semibold ${
-                            phone.quantity === 0
+                            phone.totalQuantity === 0
                               ? "text-red-600 dark:text-red-400"
-                              : phone.quantity < 10
+                              : phone.totalQuantity < 10
                               ? "text-yellow-600 dark:text-yellow-400"
                               : "text-green-600 dark:text-green-400"
                           }`}
                         >
-                          {phone.quantity}
+                          {phone.totalQuantity}
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm">

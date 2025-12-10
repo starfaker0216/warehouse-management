@@ -9,46 +9,54 @@ import {
   orderBy,
   Timestamp,
   QueryDocumentSnapshot,
-  DocumentData,
+  DocumentData
 } from "firebase/firestore";
 import { db } from "./firebase";
 
 export interface Phone {
   id: string;
   name: string;
-  brand: string;
   model: string;
-  color: string;
-  storage: string;
   price: number;
-  quantity: number;
+  data: Array<{ color: string; quantity: number }>;
+  totalQuantity: number;
   status: "in_stock" | "low_stock" | "out_of_stock";
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-// Helper function to calculate status based on quantity
-const calculateStatus = (quantity: number): "in_stock" | "low_stock" | "out_of_stock" => {
-  if (quantity === 0) return "out_of_stock";
-  if (quantity < 10) return "low_stock";
+// Helper function to calculate status based on totalQuantity
+const calculateStatus = (
+  totalQuantity: number
+): "in_stock" | "low_stock" | "out_of_stock" => {
+  if (totalQuantity === 0) return "out_of_stock";
+  if (totalQuantity < 10) return "low_stock";
   return "in_stock";
 };
 
 // Convert Firestore document to Phone object
 const docToPhone = (doc: QueryDocumentSnapshot<DocumentData>): Phone => {
   const data = doc.data();
+  const phoneData = data.data || [];
+  const totalQuantity =
+    data.totalQuantity !== undefined
+      ? data.totalQuantity
+      : phoneData.reduce(
+          (sum: number, item: { color: string; quantity: number }) =>
+            sum + (item.quantity || 0),
+          0
+        );
+
   return {
     id: doc.id,
     name: data.name || "",
-    brand: data.brand || "",
     model: data.model || "",
-    color: data.color || "",
-    storage: data.storage || "",
     price: data.price || 0,
-    quantity: data.quantity || 0,
-    status: data.status || calculateStatus(data.quantity || 0),
+    data: phoneData,
+    totalQuantity: totalQuantity,
+    status: data.status || calculateStatus(totalQuantity),
     createdAt: data.createdAt?.toDate(),
-    updatedAt: data.updatedAt?.toDate(),
+    updatedAt: data.updatedAt?.toDate()
   };
 };
 
@@ -66,15 +74,17 @@ export const getPhones = async (): Promise<Phone[]> => {
 };
 
 // Add a new phone
-export const addPhone = async (phoneData: Omit<Phone, "id" | "createdAt" | "updatedAt">): Promise<string> => {
+export const addPhone = async (
+  phoneData: Omit<Phone, "id" | "createdAt" | "updatedAt">
+): Promise<string> => {
   try {
     const phonesRef = collection(db, "phones");
-    const status = calculateStatus(phoneData.quantity);
+    const status = calculateStatus(phoneData.totalQuantity);
     const newPhone = {
       ...phoneData,
       status,
       createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
+      updatedAt: Timestamp.now()
     };
     const docRef = await addDoc(phonesRef, newPhone);
     return docRef.id;
@@ -93,14 +103,14 @@ export const updatePhone = async (
     const phoneRef = doc(db, "phones", id);
     const updateData: any = {
       ...phoneData,
-      updatedAt: Timestamp.now(),
+      updatedAt: Timestamp.now()
     };
-    
-    // Recalculate status if quantity is being updated
-    if (phoneData.quantity !== undefined) {
-      updateData.status = calculateStatus(phoneData.quantity);
+
+    // Recalculate status if totalQuantity is being updated
+    if (phoneData.totalQuantity !== undefined) {
+      updateData.status = calculateStatus(phoneData.totalQuantity);
     }
-    
+
     await updateDoc(phoneRef, updateData);
   } catch (error) {
     console.error("Error updating phone:", error);
@@ -118,5 +128,3 @@ export const deletePhone = async (id: string): Promise<void> => {
     throw error;
   }
 };
-
-

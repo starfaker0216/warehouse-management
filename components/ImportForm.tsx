@@ -3,7 +3,12 @@
 import { useState, useEffect } from "react";
 import { addImportRecord, ImportRecord } from "../lib/importService";
 import { getPhones, Phone } from "../lib/phoneService";
-import { getColors, addColor, getSuppliers, addSupplier } from "../lib/configService";
+import {
+  getColors,
+  addColor,
+  getSuppliers,
+  addSupplier
+} from "../lib/configService";
 
 interface ImportFormProps {
   isOpen: boolean;
@@ -11,8 +16,14 @@ interface ImportFormProps {
   onSuccess: () => void;
 }
 
-export default function ImportForm({ isOpen, onClose, onSuccess }: ImportFormProps) {
-  const [formData, setFormData] = useState<Omit<ImportRecord, "id" | "createdAt" | "updatedAt">>({
+export default function ImportForm({
+  isOpen,
+  onClose,
+  onSuccess
+}: ImportFormProps) {
+  const [formData, setFormData] = useState<
+    Omit<ImportRecord, "id" | "createdAt" | "updatedAt">
+  >({
     phoneId: "",
     importDate: new Date(),
     phoneType: "",
@@ -23,7 +34,7 @@ export default function ImportForm({ isOpen, onClose, onSuccess }: ImportFormPro
     importPrice: 0,
     supplier: "",
     imeiType: "",
-    note: "",
+    note: ""
   });
 
   const [phones, setPhones] = useState<Phone[]>([]);
@@ -47,7 +58,7 @@ export default function ImportForm({ isOpen, onClose, onSuccess }: ImportFormPro
       const [phonesData, colorsData, suppliersData] = await Promise.all([
         getPhones(),
         getColors(),
-        getSuppliers(),
+        getSuppliers()
       ]);
       setPhones(phonesData);
       setColors(colorsData);
@@ -104,7 +115,7 @@ export default function ImportForm({ isOpen, onClose, onSuccess }: ImportFormPro
       importPrice: 0,
       supplier: "",
       imeiType: "",
-      note: "",
+      note: ""
     });
     setError(null);
     setNewColor("");
@@ -117,7 +128,7 @@ export default function ImportForm({ isOpen, onClose, onSuccess }: ImportFormPro
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("vi-VN", {
       style: "currency",
-      currency: "VND",
+      currency: "VND"
     }).format(amount);
   };
 
@@ -166,13 +177,15 @@ export default function ImportForm({ isOpen, onClose, onSuccess }: ImportFormPro
               <select
                 required
                 value={formData.phoneId}
-                onChange={(e) => setFormData({ ...formData, phoneId: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, phoneId: e.target.value })
+                }
                 className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
               >
                 <option value="">Chọn máy</option>
                 {phones.map((phone) => (
                   <option key={phone.id} value={phone.id}>
-                    {phone.name} - {phone.brand}
+                    {phone.name} - {phone.model}
                   </option>
                 ))}
               </select>
@@ -190,7 +203,7 @@ export default function ImportForm({ isOpen, onClose, onSuccess }: ImportFormPro
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    importDate: new Date(e.target.value),
+                    importDate: new Date(e.target.value)
                   })
                 }
                 className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
@@ -227,7 +240,7 @@ export default function ImportForm({ isOpen, onClose, onSuccess }: ImportFormPro
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    totalQuantity: parseInt(e.target.value) || 0,
+                    totalQuantity: parseInt(e.target.value) || 0
                   })
                 }
                 className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
@@ -247,7 +260,7 @@ export default function ImportForm({ isOpen, onClose, onSuccess }: ImportFormPro
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    quantity: parseInt(e.target.value) || 0,
+                    quantity: parseInt(e.target.value) || 0
                   })
                 }
                 className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
@@ -263,7 +276,9 @@ export default function ImportForm({ isOpen, onClose, onSuccess }: ImportFormPro
                 type="text"
                 required
                 value={formData.imei}
-                onChange={(e) => setFormData({ ...formData, imei: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, imei: e.target.value })
+                }
                 placeholder="Nhập IMEI"
                 className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
               />
@@ -338,7 +353,7 @@ export default function ImportForm({ isOpen, onClose, onSuccess }: ImportFormPro
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    importPrice: parseFloat(e.target.value) || 0,
+                    importPrice: parseFloat(e.target.value) || 0
                   })
                 }
                 placeholder="0"
@@ -430,7 +445,9 @@ export default function ImportForm({ isOpen, onClose, onSuccess }: ImportFormPro
               </label>
               <textarea
                 value={formData.note}
-                onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, note: e.target.value })
+                }
                 rows={3}
                 placeholder="Nhập ghi chú (tùy chọn)"
                 className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
@@ -459,5 +476,3 @@ export default function ImportForm({ isOpen, onClose, onSuccess }: ImportFormPro
     </div>
   );
 }
-
-
