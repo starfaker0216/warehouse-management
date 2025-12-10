@@ -1,0 +1,5 @@
+---
+alwaysApply: true
+---
+
+1. mặc định các <input /> type number không có field tăng, giảm số lượng ở bên tay phải

@@ -7,6 +7,7 @@ import {
   parseCurrencyInput
 } from "../../utils/currencyUtils";
 import toast from "react-hot-toast";
+import PriceInput from "../common/PriceInput";
 
 interface EditPhoneModalProps {
   isOpen: boolean;
@@ -72,26 +73,32 @@ export default function EditPhoneModal({
 
   const handleColorChange = (
     index: number,
-    field: "color" | "quantity" | "price",
+    field: "color" | "quantity",
     value: string | number
   ) => {
     const newData = [...data];
-    if (field === "price") {
-      // Handle price input
-      const priceValue =
-        typeof value === "string" ? parseCurrencyInput(value) : value;
-      newData[index] = {
-        ...newData[index],
-        price: priceValue,
-        priceInputValue:
-          typeof value === "string" ? value : formatCurrencyInput(priceValue)
-      };
-    } else {
-      newData[index] = {
-        ...newData[index],
-        [field]: field === "quantity" ? Number(value) || 0 : value
-      };
-    }
+    newData[index] = {
+      ...newData[index],
+      [field]: field === "quantity" ? Number(value) || 0 : value
+    };
+    setData(newData);
+  };
+
+  const handlePriceChange = (index: number, price: number) => {
+    const newData = [...data];
+    newData[index] = {
+      ...newData[index],
+      price
+    };
+    setData(newData);
+  };
+
+  const handlePriceInputChange = (index: number, inputValue: string) => {
+    const newData = [...data];
+    newData[index] = {
+      ...newData[index],
+      priceInputValue: inputValue
+    };
     setData(newData);
   };
 
@@ -111,31 +118,61 @@ export default function EditPhoneModal({
       return;
     }
 
-    // Validate data array
-    const hasInvalidData = data.some(
-      (item) => !item.color.trim() || item.quantity < 0 || item.price <= 0
+    // First, parse prices from inputValue to ensure we have the latest values
+    const dataWithParsedPrices = data.map((item) => {
+      const parsedPrice = item.priceInputValue
+        ? parseCurrencyInput(item.priceInputValue)
+        : item.price;
+      return {
+        ...item,
+        price: parsedPrice > 0 ? parsedPrice : item.price
+      };
+    });
+
+    // Filter out completely empty items (items with no fields filled)
+    const nonEmptyItems = dataWithParsedPrices.filter(
+      (item) => item.color.trim() || item.quantity > 0 || item.price > 0
     );
-    if (hasInvalidData) {
+
+    if (nonEmptyItems.length === 0) {
+      toast.error(
+        "Vui lòng điền đầy đủ thông tin màu sắc, số lượng và giá cho ít nhất một màu"
+      );
+      return;
+    }
+
+    // Validate that all non-empty items have all required fields
+    const validData = nonEmptyItems.filter(
+      (item) => item.color.trim() && item.quantity > 0 && item.price > 0
+    );
+
+    if (validData.length !== nonEmptyItems.length) {
       toast.error(
         "Vui lòng điền đầy đủ thông tin màu sắc, số lượng và giá cho từng màu"
       );
       return;
     }
 
+    if (validData.length === 0) {
+      toast.error(
+        "Vui lòng điền đầy đủ thông tin màu sắc, số lượng và giá cho ít nhất một màu"
+      );
+      return;
+    }
+
     setLoading(true);
     try {
+      // Use validData which already has parsed prices
+      const finalData = validData.map((item) => ({
+        color: item.color.trim(),
+        quantity: item.quantity,
+        price: item.price
+      }));
+
       await onSave(phone.id, {
         name: name.trim(),
         model: model.trim(),
-        data: data
-          .filter(
-            (item) => item.color.trim() && item.quantity > 0 && item.price > 0
-          )
-          .map((item) => ({
-            color: item.color.trim(),
-            quantity: item.quantity,
-            price: item.price
-          }))
+        data: finalData
       });
 
       toast.success("Cập nhật sản phẩm thành công");
@@ -227,7 +264,7 @@ export default function EditPhoneModal({
 
             {data.length === 0 ? (
               <div className="rounded-lg border border-dashed border-zinc-300 p-4 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-                Chưa có màu sắc nào. Nhấn "Thêm màu" để thêm.
+                {'Chưa có màu sắc nào. Nhấn "Thêm màu" để thêm.'}
               </div>
             ) : (
               <div className="space-y-3">
@@ -261,22 +298,24 @@ export default function EditPhoneModal({
                         onChange={(e) =>
                           handleColorChange(index, "quantity", e.target.value)
                         }
-                        className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
+                        className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400 [appearance:textfield] [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         placeholder="0"
                       />
                     </div>
                     <div className="flex-1">
-                      <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                        Giá
-                      </label>
-                      <input
-                        type="text"
-                        value={item.priceInputValue}
-                        onChange={(e) =>
-                          handleColorChange(index, "price", e.target.value)
+                      <PriceInput
+                        value={item.price}
+                        inputValue={item.priceInputValue}
+                        onValueChange={(price) =>
+                          handlePriceChange(index, price)
                         }
-                        className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
+                        onInputValueChange={(value) =>
+                          handlePriceInputChange(index, value)
+                        }
                         placeholder="Nhập giá"
+                        id={`price-input-${index}`}
+                        label="Giá"
+                        maxSuggestions={3}
                       />
                     </div>
                     <div className="flex items-end">
