@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Phone } from "../../lib/phoneService";
 import StatusBadge from "./StatusBadge";
 import { formatCurrency } from "../../utils/currencyUtils";
@@ -19,6 +20,7 @@ export default function PhoneTable({
   searchTerm,
   filterStatus
 }: PhoneTableProps) {
+  const router = useRouter();
   const { employee } = useAuth();
   const isAdmin = employee?.role === "admin";
   const { updatePhone, fetchPhones } = usePhoneStore();
@@ -55,6 +57,27 @@ export default function PhoneTable({
     });
     // Refresh phones list with current search/filter state
     await fetchPhones(searchTerm, filterStatus);
+  };
+
+  const handleRowClick = (phone: Phone, e: React.MouseEvent) => {
+    // Don't navigate if clicking on the edit button
+    const target = e.target as HTMLElement;
+    if (target.closest("button")) {
+      return;
+    }
+
+    // Get first available color
+    const firstColor =
+      phone.data && phone.data.length > 0 ? phone.data[0].color : "";
+
+    // Navigate to export page with phone info
+    const params = new URLSearchParams({
+      phoneId: phone.id
+    });
+    if (firstColor) {
+      params.append("color", firstColor);
+    }
+    router.push(`/export?${params.toString()}`);
   };
 
   if (phones.length === 0) {
@@ -97,7 +120,8 @@ export default function PhoneTable({
             {phones.map((phone) => (
               <tr
                 key={phone.id}
-                className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                onClick={(e) => handleRowClick(phone, e)}
+                className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
               >
                 <td className="whitespace-nowrap px-6 py-4">
                   <div className="text-sm font-medium text-zinc-900 dark:text-zinc-50">

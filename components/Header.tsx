@@ -25,6 +25,11 @@ export default function Header() {
       label: "Nhập Hàng",
       href: "/import",
       ariaLabel: "Nhập hàng"
+    },
+    {
+      label: "Bán Hàng",
+      href: "/export",
+      ariaLabel: "Bán hàng"
     }
   ];
 
