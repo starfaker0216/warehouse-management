@@ -242,7 +242,6 @@ export default function ImportPage() {
         isOpen={showPhoneSelector}
         onClose={() => setShowPhoneSelector(false)}
         onSelect={handlePhoneSelect}
-        phones={phones}
         onPhoneAdded={handlePhoneAdded}
       />
 

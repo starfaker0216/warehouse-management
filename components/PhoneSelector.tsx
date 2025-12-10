@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Phone, addPhone } from "../lib/phoneService";
+import { usePhoneStore } from "../stores/usePhoneStore";
 
 interface PhoneSelectorProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (phone: Phone) => void;
-  phones: Phone[];
   onPhoneAdded?: (phone: Phone) => void;
 }
 
@@ -15,33 +15,38 @@ export default function PhoneSelector({
   isOpen,
   onClose,
   onSelect,
-  phones,
   onPhoneAdded
 }: PhoneSelectorProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [newPhoneId, setNewPhoneId] = useState("");
   const [newPhoneName, setNewPhoneName] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Filter phones based on search query
-  const filteredPhones = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return phones;
+  const { phones, loading, fetchPhones } = usePhoneStore();
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Fetch phones from Firebase with search query
+  useEffect(() => {
+    if (isOpen) {
+      fetchPhones(debouncedSearchQuery);
     }
-    const query = searchQuery.toLowerCase();
-    return phones.filter(
-      (phone) =>
-        phone.name.toLowerCase().includes(query) ||
-        phone.model.toLowerCase().includes(query) ||
-        phone.id.toLowerCase().includes(query)
-    );
-  }, [phones, searchQuery]);
+  }, [isOpen, debouncedSearchQuery, fetchPhones]);
 
   // Reset form when modal opens/closes
   useEffect(() => {
     if (!isOpen) {
       setSearchQuery("");
+      setDebouncedSearchQuery("");
       setNewPhoneId("");
       setNewPhoneName("");
       setError(null);
@@ -78,7 +83,10 @@ export default function PhoneSelector({
         updatedAt: new Date()
       };
 
-      // Call onPhoneAdded if provided to refresh the list
+      // Refresh the list
+      await fetchPhones(debouncedSearchQuery);
+
+      // Call onPhoneAdded if provided
       if (onPhoneAdded) {
         onPhoneAdded(newPhone);
       }
@@ -166,13 +174,18 @@ export default function PhoneSelector({
 
         {/* Phone List */}
         <div className="flex-1 overflow-y-auto p-6">
-          {filteredPhones.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-8 text-zinc-500 dark:text-zinc-400">
+              <div className="mb-4 inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-blue-600 border-r-transparent"></div>
+              <p>Đang tải...</p>
+            </div>
+          ) : phones.length === 0 ? (
             <div className="text-center py-8 text-zinc-500 dark:text-zinc-400">
               {searchQuery ? "Không tìm thấy máy nào" : "Chưa có máy nào"}
             </div>
           ) : (
             <div className="space-y-2">
-              {filteredPhones.map((phone) => (
+              {phones.map((phone) => (
                 <button
                   key={phone.id}
                   onClick={() => handleSelectPhone(phone)}
