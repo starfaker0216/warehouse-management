@@ -1,0 +1,7 @@
+---
+alwaysApply: true
+---
+
+1. Luôn sử dụng zustand để quản lý state, props, hạn chế việc truyền qua lại state, props giữa các components, hạn chế việc sử dụng useState trong components (chỉ thực sự dùng khi các state đó không bao giờ sử dụng ở các components khác)
+2. Luôn ưu tiên vấn đề clean code, mỗi file không nên quá dài, các function tránh bị lặp đi lặp lại, luôn tách nhỏ thành component nếu có thể, các components phục vụ cho 1 page duy nhất nên được group vào folder riêng thành vì ở chung hết ở common components.
+3. Luôn sử dụng yarn để quản lý các package

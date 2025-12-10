@@ -1,13 +1,8 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import {
-  Employee,
-  login as loginService,
-  getAuthFromStorage,
-  saveAuthToStorage,
-  removeAuthFromStorage
-} from "../lib/authService";
+import { createContext, useContext, useEffect, ReactNode } from "react";
+import { Employee } from "../lib/authService";
+import { useAuthStore } from "../stores/useAuthStore";
 
 interface AuthContextType {
   employee: Employee | null;
@@ -20,41 +15,13 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [employee, setEmployee] = useState<Employee | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { employee, loading, isAuthenticated, login, logout, initialize } =
+    useAuthStore();
 
-  // Load from localStorage only on client side after mount
+  // Initialize auth on mount
   useEffect(() => {
-    const savedAuth = getAuthFromStorage();
-    setEmployee(savedAuth);
-    setLoading(false);
-  }, []);
-
-  const login = async (
-    employeeCode: string,
-    password: string
-  ): Promise<boolean> => {
-    setLoading(true);
-    try {
-      const employeeData = await loginService(employeeCode, password);
-      if (employeeData) {
-        setEmployee(employeeData);
-        saveAuthToStorage(employeeData);
-        setLoading(false);
-        return true;
-      }
-      setLoading(false);
-      return false;
-    } catch {
-      setLoading(false);
-      return false;
-    }
-  };
-
-  const logout = () => {
-    setEmployee(null);
-    removeAuthFromStorage();
-  };
+    initialize();
+  }, [initialize]);
 
   return (
     <AuthContext.Provider
@@ -63,7 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         login,
         logout,
-        isAuthenticated: !!employee
+        isAuthenticated
       }}
     >
       {children}

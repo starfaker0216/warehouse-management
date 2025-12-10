@@ -70,7 +70,12 @@ export default function ImportPage() {
 
         {/* Form */}
         <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-zinc-900">
-          <form onSubmit={handleSubmit}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSubmit();
+            }}
+          >
             {error && (
               <div className="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
                 {error}

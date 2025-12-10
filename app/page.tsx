@@ -2,36 +2,20 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getPhones, Phone } from "../lib/phoneService";
+import { Phone } from "../lib/phoneService";
 import { useAuth } from "../contexts/AuthContext";
+import { usePhoneStore } from "../stores/usePhoneStore";
 
 export default function Home() {
   const { loading: authLoading, isAuthenticated } = useAuth();
   const router = useRouter();
-  const [phones, setPhones] = useState<Phone[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { phones, loading, error, fetchPhones } = usePhoneStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
-  // Load phones from Firestore
-  const loadPhones = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getPhones();
-      setPhones(data);
-    } catch (err) {
-      console.error("Error loading phones:", err);
-      setError("Không thể tải dữ liệu. Vui lòng kiểm tra kết nối Firebase.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadPhones();
-  }, []);
+    fetchPhones();
+  }, [fetchPhones]);
 
   // Calculate statistics
   const totalPhones = phones.reduce(
