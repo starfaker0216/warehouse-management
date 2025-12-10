@@ -67,7 +67,6 @@ export default function PhoneSelector({
       const newPhoneData: Omit<Phone, "id" | "createdAt" | "updatedAt"> = {
         name: newPhoneName.trim(),
         model: newPhoneId.trim(), // Store custom ID in model field
-        price: 0,
         data: [],
         totalQuantity: 0,
         status: "out_of_stock"

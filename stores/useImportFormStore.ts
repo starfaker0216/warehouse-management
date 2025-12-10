@@ -192,7 +192,8 @@ export const useImportFormStore = create<ImportFormState>((set, get) => ({
           } else {
             updatedData.push({
               color: updatedFormData.color,
-              quantity: updatedFormData.quantity
+              quantity: updatedFormData.quantity,
+              price: 0
             });
           }
 

@@ -3,24 +3,25 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "../contexts/AuthContext";
 import Header from "../components/Header";
+import { Toaster } from "react-hot-toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
-  subsets: ["latin"],
+  subsets: ["latin"]
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
-  subsets: ["latin"],
+  subsets: ["latin"]
 });
 
 export const metadata: Metadata = {
   title: "Thống Kê Kho Hàng Điện Thoại",
-  description: "Hệ thống quản lý và thống kê kho hàng điện thoại",
+  description: "Hệ thống quản lý và thống kê kho hàng điện thoại"
 };
 
 export default function RootLayout({
-  children,
+  children
 }: Readonly<{
   children: React.ReactNode;
 }>) {
@@ -32,6 +33,18 @@ export default function RootLayout({
         <AuthProvider>
           <Header />
           {children}
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 3000,
+              success: {
+                iconTheme: {
+                  primary: "#fff",
+                  secondary: "#10b981"
+                }
+              }
+            }}
+          />
         </AuthProvider>
       </body>
     </html>

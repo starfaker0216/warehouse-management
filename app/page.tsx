@@ -85,7 +85,11 @@ export default function Home() {
         />
 
         {/* Inventory Table */}
-        <PhoneTable phones={phones} />
+        <PhoneTable
+          phones={phones}
+          searchTerm={debouncedSearchTerm}
+          filterStatus={filterStatus}
+        />
 
         {/* Summary */}
         <div className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">

@@ -20,8 +20,7 @@ export interface Phone {
   id: string;
   name: string;
   model: string;
-  price: number;
-  data: Array<{ color: string; quantity: number }>;
+  data: Array<{ color: string; quantity: number; price: number }>;
   totalQuantity: number;
   status: "in_stock" | "low_stock" | "out_of_stock";
   createdAt?: Date;
@@ -61,13 +60,28 @@ const generateSearchKeywords = (
 // Convert Firestore document to Phone object
 const docToPhone = (doc: QueryDocumentSnapshot<DocumentData>): Phone => {
   const data = doc.data();
-  const phoneData = data.data || [];
+  const phoneData =
+    (data.data as Array<{
+      color?: string;
+      quantity?: number;
+      price?: number;
+    }>) || [];
+
+  // Handle backward compatibility: add price field if missing (use 0 as default)
+  const phoneDataWithPrice = phoneData.map((item) => ({
+    color: item.color || "",
+    quantity: item.quantity || 0,
+    price: item.price !== undefined ? item.price : 0
+  }));
+
   const totalQuantity =
     data.totalQuantity !== undefined
       ? data.totalQuantity
-      : phoneData.reduce(
-          (sum: number, item: { color: string; quantity: number }) =>
-            sum + (item.quantity || 0),
+      : phoneDataWithPrice.reduce(
+          (
+            sum: number,
+            item: { color: string; quantity: number; price: number }
+          ) => sum + (item.quantity || 0),
           0
         );
 
@@ -75,8 +89,7 @@ const docToPhone = (doc: QueryDocumentSnapshot<DocumentData>): Phone => {
     id: doc.id,
     name: data.name || "",
     model: data.model || "",
-    price: data.price || 0,
-    data: phoneData,
+    data: phoneDataWithPrice,
     totalQuantity: totalQuantity,
     status: data.status || calculateStatus(totalQuantity),
     createdAt: data.createdAt?.toDate(),
