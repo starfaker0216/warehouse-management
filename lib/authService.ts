@@ -18,6 +18,7 @@ export interface Employee {
   password: string; // mật khẩu (nên hash trong production)
   name: string;
   role?: EmployeeRole;
+  warehouseId?: string; // id kho
   createdAt?: Date;
 }
 
@@ -57,6 +58,7 @@ export const login = async (
       password: "", // Don't return password
       name: employeeData.name || "",
       role: employeeData.role || "employee",
+      warehouseId: employeeData.warehouseId || undefined,
       createdAt: employeeData.createdAt?.toDate()
     };
   } catch (error) {
@@ -81,6 +83,7 @@ export const getEmployee = async (id: string): Promise<Employee | null> => {
       password: "", // Don't return password
       name: data.name || "",
       role: data.role || "employee",
+      warehouseId: data.warehouseId || undefined,
       createdAt: data.createdAt?.toDate()
     };
   } catch (error) {
@@ -107,7 +110,8 @@ export const createEmployee = async (
   employeeCode: string,
   password: string,
   name: string,
-  role: string = "employee"
+  role: string = "employee",
+  warehouseId?: string
 ): Promise<string> => {
   try {
     // Validate inputs
@@ -128,6 +132,7 @@ export const createEmployee = async (
       password: hashedPassword,
       name: name.trim(),
       role: role || "employee",
+      ...(warehouseId && { warehouseId }),
       createdAt: Timestamp.now()
     };
 

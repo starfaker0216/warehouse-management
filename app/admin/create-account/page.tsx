@@ -1,19 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createEmployee } from "../../../lib/authService";
 import type { EmployeeRole } from "../../../lib/authService";
+import { useWarehouseStore } from "../../../stores/useWarehouseStore";
 
 export default function CreateAccountPage() {
   const [employeeCode, setEmployeeCode] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState<EmployeeRole>("employee");
+  const [warehouseId, setWarehouseId] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
+
+  const { warehouses, fetchWarehouses } = useWarehouseStore();
+
+  // Fetch warehouses on mount
+  useEffect(() => {
+    if (warehouses.length === 0) {
+      fetchWarehouses();
+    }
+  }, [warehouses.length, fetchWarehouses]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +36,8 @@ export default function CreateAccountPage() {
         employeeCode.trim(),
         password,
         name.trim(),
-        role
+        role,
+        warehouseId || undefined
       );
       setMessage({
         type: "success",
@@ -36,6 +48,7 @@ export default function CreateAccountPage() {
       setPassword("");
       setName("");
       setRole("employee");
+      setWarehouseId("");
     } catch (error: unknown) {
       setMessage({
         type: "error",
@@ -131,6 +144,24 @@ export default function CreateAccountPage() {
                 <option value="sale">Bán hàng</option>
                 <option value="manager">Quản lý</option>
                 <option value="admin">Quản trị viên</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Kho
+              </label>
+              <select
+                value={warehouseId}
+                onChange={(e) => setWarehouseId(e.target.value)}
+                className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
+              >
+                <option value="">-- Chọn kho --</option>
+                {warehouses.map((warehouse) => (
+                  <option key={warehouse.id} value={warehouse.id}>
+                    {warehouse.name}
+                  </option>
+                ))}
               </select>
             </div>
 
