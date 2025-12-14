@@ -23,6 +23,7 @@ export interface Phone {
   data: Array<{ color: string; quantity: number; price: number }>;
   totalQuantity: number;
   status: "in_stock" | "low_stock" | "out_of_stock";
+  condition?: string;
   updatedBy?: {
     employeeId: string;
     employeeName: string;
@@ -96,6 +97,7 @@ const docToPhone = (doc: QueryDocumentSnapshot<DocumentData>): Phone => {
     data: phoneDataWithPrice,
     totalQuantity: totalQuantity,
     status: data.status || calculateStatus(totalQuantity),
+    condition: data.condition || undefined,
     updatedBy: data.updatedBy || undefined,
     createdAt: data.createdAt?.toDate(),
     updatedAt: data.updatedAt?.toDate()

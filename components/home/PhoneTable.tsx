@@ -43,6 +43,7 @@ export default function PhoneTable({
       name: string;
       model: string;
       data: Array<{ color: string; quantity: number; price: number }>;
+      condition?: string;
     }
   ) => {
     // Calculate totalQuantity from data array
@@ -106,7 +107,7 @@ export default function PhoneTable({
                 Giá
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                Tổng số lượng
+                Tình trạng máy
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                 Trạng thái
@@ -169,18 +170,16 @@ export default function PhoneTable({
                     </span>
                   )}
                 </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-zinc-900 dark:text-zinc-50">
-                  <span
-                    className={`font-semibold ${
-                      phone.totalQuantity === 0
-                        ? "text-red-600 dark:text-red-400"
-                        : phone.totalQuantity < 10
-                        ? "text-yellow-600 dark:text-yellow-400"
-                        : "text-green-600 dark:text-green-400"
-                    }`}
-                  >
-                    {phone.totalQuantity}
-                  </span>
+                <td className="px-6 py-4 text-sm text-zinc-900 dark:text-zinc-50">
+                  {phone.condition ? (
+                    <div className="whitespace-pre-wrap break-words">
+                      {phone.condition}
+                    </div>
+                  ) : (
+                    <span className="text-zinc-400 dark:text-zinc-500">
+                      Chưa có thông tin
+                    </span>
+                  )}
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-sm">
                   <StatusBadge status={phone.status} />
