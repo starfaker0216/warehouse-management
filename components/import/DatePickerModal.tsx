@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useLayoutEffect, useRef } from "react";
 import { formatDate } from "../../utils/dateUtils";
 
 interface DatePickerModalProps {
@@ -18,19 +18,25 @@ export default function DatePickerModal({
 }: DatePickerModalProps) {
   const [currentMonth, setCurrentMonth] = useState(selectedDate.getMonth());
   const [currentYear, setCurrentYear] = useState(selectedDate.getFullYear());
+  const prevIsOpenRef = useRef<boolean>(isOpen);
 
-  // Update state when selectedDate changes
-  useEffect(() => {
-    if (isOpen) {
-      setCurrentMonth(selectedDate.getMonth());
-      setCurrentYear(selectedDate.getFullYear());
+  // Sync state with selectedDate when modal opens
+  // This is necessary to reset the calendar view when the modal opens
+  useLayoutEffect(() => {
+    if (isOpen && !prevIsOpenRef.current) {
+      // Modal just opened - sync with selectedDate
+      // Using requestAnimationFrame to avoid synchronous setState in effect
+      requestAnimationFrame(() => {
+        setCurrentMonth(selectedDate.getMonth());
+        setCurrentYear(selectedDate.getFullYear());
+      });
     }
-  }, [selectedDate, isOpen]);
+    prevIsOpenRef.current = isOpen;
+  }, [isOpen, selectedDate]);
 
   // Get first day of month and number of days
   const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-  const daysInPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
 
   // Generate calendar days
   const calendarDays: (number | null)[] = [];
@@ -125,6 +131,7 @@ export default function DatePickerModal({
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-zinc-200 dark:border-zinc-800">
           <button
+            type="button"
             onClick={handlePrevMonth}
             className="p-2 rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-300 transition-colors"
             aria-label="Tháng trước"
@@ -171,6 +178,7 @@ export default function DatePickerModal({
             </select>
           </div>
           <button
+            type="button"
             onClick={handleNextMonth}
             className="p-2 rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-300 transition-colors"
             aria-label="Tháng sau"
@@ -217,6 +225,7 @@ export default function DatePickerModal({
 
               return (
                 <button
+                  type="button"
                   key={day}
                   onClick={() => handleDateClick(day)}
                   className={`
