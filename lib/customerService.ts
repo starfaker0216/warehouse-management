@@ -4,6 +4,8 @@ import {
   where,
   getDocs,
   addDoc,
+  updateDoc,
+  doc,
   Timestamp,
   QueryDocumentSnapshot,
   DocumentData
@@ -14,6 +16,9 @@ export interface Customer {
   id: string;
   phone: string;
   name: string;
+  birthday?: string; // DD / MM / YYYY format
+  address?: string;
+  debt?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -25,6 +30,9 @@ const docToCustomer = (doc: QueryDocumentSnapshot<DocumentData>): Customer => {
     id: doc.id,
     phone: data.phone || "",
     name: data.name || "",
+    birthday: data.birthday || undefined,
+    address: data.address || undefined,
+    debt: data.debt || undefined,
     createdAt: data.createdAt?.toDate(),
     updatedAt: data.updatedAt?.toDate()
   };
@@ -57,7 +65,10 @@ export const getCustomerByPhone = async (
 // Add a new customer
 export const addCustomer = async (
   phone: string,
-  name: string
+  name: string,
+  birthday?: string,
+  address?: string,
+  debt?: number
 ): Promise<string> => {
   try {
     if (!phone || !phone.trim() || !name || !name.trim()) {
@@ -68,6 +79,9 @@ export const addCustomer = async (
     const newCustomer = {
       phone: phone.trim(),
       name: name.trim(),
+      ...(birthday && { birthday: birthday.trim() }),
+      ...(address && { address: address.trim() }),
+      ...(debt !== undefined && debt !== null && { debt }),
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now()
     };
@@ -75,6 +89,42 @@ export const addCustomer = async (
     return docRef.id;
   } catch (error) {
     console.error("Error adding customer:", error);
+    throw error;
+  }
+};
+
+// Update an existing customer
+export const updateCustomer = async (
+  customerId: string,
+  name: string,
+  birthday?: string,
+  address?: string,
+  debt?: number
+): Promise<void> => {
+  try {
+    if (!customerId || !name || !name.trim()) {
+      throw new Error("Customer ID and name are required");
+    }
+
+    const customerRef = doc(db, "customers", customerId);
+    const updateData: Record<string, unknown> = {
+      name: name.trim(),
+      updatedAt: Timestamp.now()
+    };
+
+    if (birthday !== undefined) {
+      updateData.birthday = birthday.trim() || null;
+    }
+    if (address !== undefined) {
+      updateData.address = address.trim() || null;
+    }
+    if (debt !== undefined && debt !== null) {
+      updateData.debt = debt;
+    }
+
+    await updateDoc(customerRef, updateData);
+  } catch (error) {
+    console.error("Error updating customer:", error);
     throw error;
   }
 };

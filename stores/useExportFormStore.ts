@@ -1,7 +1,11 @@
 import { create } from "zustand";
 import { addExportRecord } from "../lib/exportService";
 import { updatePhone as updatePhoneService, Phone } from "../lib/phoneService";
-import { getCustomerByPhone, addCustomer } from "../lib/customerService";
+import {
+  getCustomerByPhone,
+  addCustomer,
+  updateCustomer
+} from "../lib/customerService";
 import { usePhoneStore } from "./usePhoneStore";
 import { useAuthStore } from "./useAuthStore";
 import toast from "react-hot-toast";
@@ -9,6 +13,9 @@ import toast from "react-hot-toast";
 export interface ExportFormData {
   customerPhone: string;
   customerName: string;
+  customerBirthday: string;
+  customerAddress: string;
+  customerDebt: number;
   phoneName: string;
   color: string;
   imei: string;
@@ -25,6 +32,9 @@ export interface ExportFormData {
 const initialFormData: ExportFormData = {
   customerPhone: "",
   customerName: "",
+  customerBirthday: "",
+  customerAddress: "",
+  customerDebt: 0,
   phoneName: "",
   color: "",
   imei: "",
@@ -152,14 +162,26 @@ export const useExportFormStore = create<ExportFormState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      // Check if customer exists, if not create new customer
+      // Check if customer exists, if not create new customer, otherwise update
       const existingCustomer = await getCustomerByPhone(
         formData.customerPhone.trim()
       );
       if (!existingCustomer) {
         await addCustomer(
           formData.customerPhone.trim(),
-          formData.customerName.trim()
+          formData.customerName.trim(),
+          formData.customerBirthday || undefined,
+          formData.customerAddress || undefined,
+          formData.customerDebt || undefined
+        );
+      } else {
+        // Update existing customer with new information
+        await updateCustomer(
+          existingCustomer.id,
+          formData.customerName.trim(),
+          formData.customerBirthday || undefined,
+          formData.customerAddress || undefined,
+          formData.customerDebt || undefined
         );
       }
 

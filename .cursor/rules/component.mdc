@@ -3,3 +3,4 @@ alwaysApply: true
 ---
 
 1. mặc định các <input /> type number không có field tăng, giảm số lượng ở bên tay phải
+2. mặc định những chỗ hiển thị date sẽ được format theo dạng DD / MM / YYYY

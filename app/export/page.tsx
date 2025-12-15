@@ -9,6 +9,7 @@ import PriceInput from "../../components/common/PriceInput";
 import { Toaster, toast } from "react-hot-toast";
 import Loading from "../../components/common/Loading";
 import { getCustomerByPhone } from "../../lib/customerService";
+import BirthdayInputField from "../../components/export/BirthdayInputField";
 
 function ExportForm() {
   const router = useRouter();
@@ -48,7 +49,12 @@ function ExportForm() {
     try {
       const customer = await getCustomerByPhone(formData.customerPhone.trim());
       if (customer) {
-        setFormData({ customerName: customer.name });
+        setFormData({
+          customerName: customer.name,
+          customerBirthday: customer.birthday || "",
+          customerAddress: customer.address || "",
+          customerDebt: customer.debt || 0
+        });
         toast.success("Đã tìm thấy thông tin khách hàng");
       } else {
         toast("Khách hàng mới", {
@@ -110,53 +116,6 @@ function ExportForm() {
             )}
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              {/* Số điện thoại khách hàng */}
-              <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Số điện thoại khách hàng{" "}
-                  <span className="text-red-500">*</span>
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    required
-                    value={formData.customerPhone}
-                    onChange={(e) =>
-                      setFormData({ customerPhone: e.target.value })
-                    }
-                    placeholder="Nhập số điện thoại"
-                    className="flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleCheckCustomer}
-                    disabled={
-                      isCheckingCustomer || !formData.customerPhone.trim()
-                    }
-                    className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-green-600 hover:bg-zinc-50 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-green-400 dark:hover:bg-zinc-700 dark:hover:text-green-300 dark:disabled:text-zinc-500"
-                  >
-                    {isCheckingCustomer ? "..." : "Kiểm Tra"}
-                  </button>
-                </div>
-              </div>
-
-              {/* Tên khách hàng */}
-              <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Tên khách hàng <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.customerName}
-                  onChange={(e) =>
-                    setFormData({ customerName: e.target.value })
-                  }
-                  placeholder="Nhập tên khách hàng"
-                  className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
-                />
-              </div>
-
               {/* Tên máy (readonly) */}
               <div>
                 <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
@@ -247,6 +206,105 @@ function ExportForm() {
                   placeholder="Nhập tặng kèm (tùy chọn)"
                   className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
                 />
+              </div>
+            </div>
+
+            {/* Thông tin khách hàng */}
+            <div className="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-800">
+              <h3 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                Thông tin khách hàng
+              </h3>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                {/* Số điện thoại khách hàng */}
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Số điện thoại khách hàng{" "}
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      required
+                      value={formData.customerPhone}
+                      onChange={(e) =>
+                        setFormData({ customerPhone: e.target.value })
+                      }
+                      placeholder="Nhập số điện thoại"
+                      className="flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCheckCustomer}
+                      disabled={
+                        isCheckingCustomer || !formData.customerPhone.trim()
+                      }
+                      className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-green-600 hover:bg-zinc-50 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-green-400 dark:hover:bg-zinc-700 dark:hover:text-green-300 dark:disabled:text-zinc-500"
+                    >
+                      {isCheckingCustomer ? "..." : "Kiểm Tra"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Tên khách hàng */}
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Tên khách hàng <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.customerName}
+                    onChange={(e) =>
+                      setFormData({ customerName: e.target.value })
+                    }
+                    placeholder="Nhập tên khách hàng"
+                    className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
+                  />
+                </div>
+
+                {/* Sinh nhật */}
+                <BirthdayInputField
+                  value={formData.customerBirthday}
+                  onChange={(value) => setFormData({ customerBirthday: value })}
+                />
+
+                {/* Công nợ */}
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Công nợ
+                  </label>
+                  <PriceInput
+                    value={formData.customerDebt}
+                    inputValue={formData.customerDebt.toString()}
+                    onValueChange={(debt) =>
+                      setFormData({ customerDebt: debt })
+                    }
+                    onInputValueChange={(value) => {
+                      const numValue =
+                        parseFloat(value.replace(/[^\d]/g, "")) || 0;
+                      setFormData({ customerDebt: numValue });
+                    }}
+                    placeholder="0"
+                    id="customerDebt"
+                    className="px-4 py-2"
+                  />
+                </div>
+
+                {/* Địa chỉ */}
+                <div className="md:col-span-2">
+                  <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Địa chỉ
+                  </label>
+                  <textarea
+                    value={formData.customerAddress}
+                    onChange={(e) =>
+                      setFormData({ customerAddress: e.target.value })
+                    }
+                    rows={2}
+                    placeholder="Nhập địa chỉ khách hàng (tùy chọn)"
+                    className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
+                  />
+                </div>
               </div>
             </div>
 
