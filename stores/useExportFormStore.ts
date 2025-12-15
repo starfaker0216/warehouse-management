@@ -167,6 +167,7 @@ export const useExportFormStore = create<ExportFormState>((set, get) => ({
       const employee = useAuthStore.getState().employee;
       const employeeId = employee?.id || "";
       const employeeName = employee?.name || "";
+      const warehouseId = employee?.warehouseId || undefined;
 
       // Add export record
       await addExportRecord({
@@ -184,7 +185,8 @@ export const useExportFormStore = create<ExportFormState>((set, get) => ({
         cashPayment: formData.cashPayment || 0,
         otherPayment: formData.otherPayment.trim(),
         employeeId,
-        employeeName
+        employeeName,
+        ...(warehouseId && { warehouseId })
       });
 
       // Update phone quantity (decrease by 1)

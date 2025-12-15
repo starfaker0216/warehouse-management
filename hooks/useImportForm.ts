@@ -3,14 +3,21 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "../stores/useAuthStore";
 import { usePhoneStore } from "../stores/usePhoneStore";
 import { useConfigStore } from "../stores/useConfigStore";
+import { useWarehouseStore } from "../stores/useWarehouseStore";
 import { useImportFormStore } from "../stores/useImportFormStore";
 import { Phone } from "../lib/phoneService";
 
 export function useImportForm() {
   const router = useRouter();
-  const { isAuthenticated, loading: authLoading, initialize } = useAuthStore();
+  const {
+    isAuthenticated,
+    loading: authLoading,
+    initialize,
+    employee
+  } = useAuthStore();
   const { phones, fetchPhones, setPhones } = usePhoneStore();
   const { colors, suppliers, fetchAll } = useConfigStore();
+  const { warehouses, fetchWarehouses } = useWarehouseStore();
   const importFormStore = useImportFormStore();
 
   // Initialize auth on mount
@@ -30,8 +37,17 @@ export function useImportForm() {
     if (isAuthenticated) {
       fetchPhones();
       fetchAll();
+      if (warehouses.length === 0) {
+        fetchWarehouses();
+      }
     }
-  }, [isAuthenticated, fetchPhones, fetchAll]);
+  }, [
+    isAuthenticated,
+    fetchPhones,
+    fetchAll,
+    warehouses.length,
+    fetchWarehouses
+  ]);
 
   const handlePhoneSelect = (phone: Phone) => {
     importFormStore.handlePhoneSelect(phone.id, phone.name);
@@ -48,6 +64,11 @@ export function useImportForm() {
     }
   };
 
+  // Get warehouse name from employee's warehouseId
+  const warehouseName = employee?.warehouseId
+    ? warehouses.find((w) => w.id === employee.warehouseId)?.name || ""
+    : "";
+
   return {
     // Form data
     formData: importFormStore.formData,
@@ -57,6 +78,7 @@ export function useImportForm() {
     phones,
     colors,
     suppliers,
+    warehouseName,
 
     // New item states
     newColor: importFormStore.newColor,

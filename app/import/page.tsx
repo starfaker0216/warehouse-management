@@ -20,6 +20,7 @@ export default function ImportPage() {
     phones,
     colors,
     suppliers,
+    warehouseName,
     newColor,
     setNewColor,
     newSupplier,
@@ -208,6 +209,20 @@ export default function ImportPage() {
                 onNewSupplierChange={setNewSupplier}
                 onShowAddSupplier={setShowAddSupplier}
               />
+
+              {/* Kho */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Kho
+                </label>
+                <input
+                  type="text"
+                  value={warehouseName}
+                  readOnly
+                  disabled
+                  className="w-full rounded-lg border border-zinc-300 bg-zinc-100 px-4 py-2 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 cursor-not-allowed"
+                />
+              </div>
 
               {/* Ghi Chú */}
               <div className="md:col-span-2">

@@ -167,12 +167,14 @@ export const useImportFormStore = create<ImportFormState>((set, get) => ({
       const employee = useAuthStore.getState().employee;
       const employeeId = employee?.id || "";
       const employeeName = employee?.name || "";
+      const warehouseId = employee?.warehouseId || undefined;
 
       // Save import record
       await addImportRecord({
         ...updatedFormData,
         employeeId,
-        employeeName
+        employeeName,
+        ...(warehouseId && { warehouseId })
       });
 
       // Update phone inventory

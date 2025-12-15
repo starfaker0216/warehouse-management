@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Phone, addPhone } from "../lib/phoneService";
 import { usePhoneStore } from "../stores/usePhoneStore";
+import { useAuthStore } from "../stores/useAuthStore";
 
 interface PhoneSelectorProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export default function PhoneSelector({
   const [error, setError] = useState<string | null>(null);
 
   const { phones, loading, fetchPhones } = usePhoneStore();
+  const { employee } = useAuthStore();
 
   // Debounce search query
   useEffect(() => {
@@ -64,12 +66,14 @@ export default function PhoneSelector({
     setIsAdding(true);
 
     try {
+      const warehouseId = employee?.warehouseId;
       const newPhoneData: Omit<Phone, "id" | "createdAt" | "updatedAt"> = {
         name: newPhoneName.trim(),
         model: newPhoneId.trim(), // Store custom ID in model field
         data: [],
         totalQuantity: 0,
-        status: "out_of_stock"
+        status: "out_of_stock",
+        ...(warehouseId && { warehouseId })
       };
 
       const phoneId = await addPhone(newPhoneData);

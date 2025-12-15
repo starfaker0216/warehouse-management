@@ -30,6 +30,7 @@ export interface ExportRecord {
   otherPayment: string; // khác
   employeeId: string; // id người nhập dữ liệu
   employeeName: string; // tên người nhập dữ liệu
+  warehouseId?: string; // id kho
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -56,6 +57,7 @@ const docToExportRecord = (
     otherPayment: data.otherPayment || "",
     employeeId: data.employeeId || "",
     employeeName: data.employeeName || "",
+    warehouseId: data.warehouseId || undefined,
     createdAt: data.createdAt?.toDate(),
     updatedAt: data.updatedAt?.toDate()
   };
@@ -100,7 +102,7 @@ export const updateExportRecord = async (
 ): Promise<void> => {
   try {
     const exportRef = doc(db, "exports", id);
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       ...exportData,
       updatedAt: Timestamp.now()
     };

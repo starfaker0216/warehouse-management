@@ -27,6 +27,7 @@ export interface ImportRecord {
   note: string; // ghi chú
   employeeId: string; // id người nhập dữ liệu
   employeeName: string; // tên người nhập dữ liệu
+  warehouseId?: string; // id kho
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -50,6 +51,7 @@ const docToImportRecord = (
     note: data.note || "",
     employeeId: data.employeeId || "",
     employeeName: data.employeeName || "",
+    warehouseId: data.warehouseId || undefined,
     createdAt: data.createdAt?.toDate(),
     updatedAt: data.updatedAt?.toDate()
   };
@@ -95,7 +97,7 @@ export const updateImportRecord = async (
 ): Promise<void> => {
   try {
     const importRef = doc(db, "imports", id);
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       ...importData,
       updatedAt: Timestamp.now()
     };

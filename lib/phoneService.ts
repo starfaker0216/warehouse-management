@@ -7,7 +7,6 @@ import {
   updateDoc,
   deleteDoc,
   query,
-  orderBy,
   where,
   Timestamp,
   QueryDocumentSnapshot,
@@ -24,6 +23,7 @@ export interface Phone {
   totalQuantity: number;
   status: "in_stock" | "low_stock" | "out_of_stock";
   condition?: string;
+  warehouseId?: string; // id kho
   updatedBy?: {
     employeeId: string;
     employeeName: string;
@@ -98,6 +98,7 @@ const docToPhone = (doc: QueryDocumentSnapshot<DocumentData>): Phone => {
     totalQuantity: totalQuantity,
     status: data.status || calculateStatus(totalQuantity),
     condition: data.condition || undefined,
+    warehouseId: data.warehouseId || undefined,
     updatedBy: data.updatedBy || undefined,
     createdAt: data.createdAt?.toDate(),
     updatedAt: data.updatedAt?.toDate()
@@ -106,6 +107,7 @@ const docToPhone = (doc: QueryDocumentSnapshot<DocumentData>): Phone => {
 
 // Get all phones with optional search and filter
 export const getPhones = async (
+  warehouseId: string,
   searchTerm?: string,
   filterStatus?: string
 ): Promise<Phone[]> => {
@@ -116,13 +118,17 @@ export const getPhones = async (
     const hasStatusFilter = filterStatus && filterStatus !== "all";
     const hasFilter = hasSearch || hasStatusFilter;
 
+    // Add warehouseId filter (required)
+    constraints.push(where("warehouseId", "==", warehouseId));
+
     // Nếu có search, không dùng Firebase query với searchKeywords
     // vì documents cũ có thể chưa có field này
     // Thay vào đó, fetch tất cả rồi filter ở client
     if (!hasSearch) {
-      // Chỉ dùng orderBy khi không có search để tránh cần composite index
+      // Chỉ dùng orderBy khi không có search và không có status filter để tránh cần composite index
       if (!hasStatusFilter) {
-        constraints.push(orderBy("createdAt", "desc"));
+        // Nếu có warehouseId filter, cần composite index hoặc sort ở client
+        // Tạm thời sort ở client để tránh cần composite index
       }
     }
 
@@ -134,6 +140,9 @@ export const getPhones = async (
     const q = query(phonesRef, ...constraints);
     const querySnapshot = await getDocs(q);
     let phones = querySnapshot.docs.map(docToPhone);
+
+    // Filter by warehouseId ở client để đảm bảo hoạt động với documents cũ không có warehouseId
+    phones = phones.filter((phone) => phone.warehouseId === warehouseId);
 
     // Filter search ở client để đảm bảo hoạt động với cả documents cũ và mới
     if (hasSearch) {

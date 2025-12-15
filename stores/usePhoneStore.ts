@@ -32,7 +32,20 @@ export const usePhoneStore = create<PhoneState>((set) => ({
   fetchPhones: async (searchTerm?: string, filterStatus?: string) => {
     set({ loading: true, error: null });
     try {
-      const phonesData = await getPhones(searchTerm, filterStatus);
+      // Get warehouseId from logged in employee
+      const employee = useAuthStore.getState().employee;
+      const warehouseId = employee?.warehouseId;
+
+      if (!warehouseId) {
+        set({
+          error: "Không tìm thấy thông tin kho. Vui lòng đăng nhập lại.",
+          loading: false,
+          phones: []
+        });
+        return;
+      }
+
+      const phonesData = await getPhones(warehouseId, searchTerm, filterStatus);
       set({ phones: phonesData, loading: false });
     } catch (err) {
       console.error("Error loading phones:", err);
@@ -47,8 +60,12 @@ export const usePhoneStore = create<PhoneState>((set) => ({
     try {
       await addPhoneService(phoneData);
       // Fetch lại với cùng search và filter nếu có
-      const phonesData = await getPhones();
-      set({ phones: phonesData });
+      const employee = useAuthStore.getState().employee;
+      const warehouseId = employee?.warehouseId;
+      if (warehouseId) {
+        const phonesData = await getPhones(warehouseId);
+        set({ phones: phonesData });
+      }
     } catch (err) {
       console.error("Error adding phone:", err);
       throw err;
@@ -61,11 +78,14 @@ export const usePhoneStore = create<PhoneState>((set) => ({
       const employee = useAuthStore.getState().employee;
       const employeeId = employee?.id || "";
       const employeeName = employee?.name || "";
+      const warehouseId = employee?.warehouseId;
 
       await updatePhoneService(id, phoneData, employeeId, employeeName);
       // Fetch lại với cùng search và filter nếu có
-      const phonesData = await getPhones();
-      set({ phones: phonesData });
+      if (warehouseId) {
+        const phonesData = await getPhones(warehouseId);
+        set({ phones: phonesData });
+      }
     } catch (err) {
       console.error("Error updating phone:", err);
       throw err;
@@ -76,8 +96,12 @@ export const usePhoneStore = create<PhoneState>((set) => ({
     try {
       await deletePhoneService(id);
       // Fetch lại với cùng search và filter nếu có
-      const phonesData = await getPhones();
-      set({ phones: phonesData });
+      const employee = useAuthStore.getState().employee;
+      const warehouseId = employee?.warehouseId;
+      if (warehouseId) {
+        const phonesData = await getPhones(warehouseId);
+        set({ phones: phonesData });
+      }
     } catch (err) {
       console.error("Error deleting phone:", err);
       throw err;
