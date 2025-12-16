@@ -31,6 +31,11 @@ export default function Header() {
   // Add Quản Lý link only for admin users
   if (isAuthenticated && employee?.role === "admin") {
     navItems.push({
+      label: "Thống Kê",
+      href: "/statistics",
+      ariaLabel: "Thống kê"
+    });
+    navItems.push({
       label: "Quản Lý",
       href: "/admin/create-account",
       ariaLabel: "Quản lý"
