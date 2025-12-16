@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { getPhones, type Phone } from "../lib/phoneService";
 import { getImportRecords, type ImportRecord } from "../lib/importService";
 import { getExportRecords, type ExportRecord } from "../lib/exportService";
+import { getIncomeExpenseRecords, type IncomeExpenseRecord } from "../lib/incomeExpenseService";
 import { getWarehouses } from "../lib/warehouseService";
 import { useAuthStore } from "./useAuthStore";
 import { formatDateInput, parseDate } from "../utils/dateUtils";
@@ -13,6 +14,8 @@ interface StatisticsTotals {
   totalInventoryValue: number;
   totalImportValue: number;
   totalExportValue: number;
+  totalIncome: number;
+  totalExpense: number;
 }
 
 interface StatisticsState extends StatisticsTotals {
@@ -93,6 +96,26 @@ const calculateExportValue = (exports: ExportRecord[], start?: Date | null, end?
   return filtered.reduce((sum, record) => sum + (record.salePrice || 0), 0);
 };
 
+const calculateIncomeExpense = (
+  records: IncomeExpenseRecord[],
+  start?: Date | null,
+  end?: Date | null
+): { totalIncome: number; totalExpense: number } => {
+  const filtered = records.filter((record) =>
+    isWithinRange(record.createdAt, start, end)
+  );
+
+  const totalIncome = filtered
+    .filter((record) => record.type === "income")
+    .reduce((sum, record) => sum + (record.amount || 0), 0);
+
+  const totalExpense = filtered
+    .filter((record) => record.type === "expense")
+    .reduce((sum, record) => sum + (record.amount || 0), 0);
+
+  return { totalIncome, totalExpense };
+};
+
 export const useStatisticsStore = create<StatisticsState>((set, get) => ({
   loading: false,
   error: null,
@@ -105,6 +128,8 @@ export const useStatisticsStore = create<StatisticsState>((set, get) => ({
   totalInventoryValue: 0,
   totalImportValue: 0,
   totalExportValue: 0,
+  totalIncome: 0,
+  totalExpense: 0,
 
   resetError: () => set({ error: null }),
 
@@ -144,9 +169,10 @@ export const useStatisticsStore = create<StatisticsState>((set, get) => ({
       // If warehouseId is provided, fetch phones for that warehouse
       // Otherwise (admin viewing all), we need to fetch all phones
       // Note: getPhones requires warehouseId, so we'll fetch all and filter
-      const [imports, exports] = await Promise.all([
+      const [imports, exports, incomeExpenses] = await Promise.all([
         getImportRecords(),
-        getExportRecords()
+        getExportRecords(),
+        getIncomeExpenseRecords()
       ]);
 
       // Fetch phones - if warehouseId is null (all), fetch from all warehouses
@@ -176,6 +202,9 @@ export const useStatisticsStore = create<StatisticsState>((set, get) => ({
       const warehouseExports = warehouseId
         ? exports.filter((record) => record.warehouseId === warehouseId)
         : exports;
+      const warehouseIncomeExpenses = warehouseId
+        ? incomeExpenses.filter((record) => record.warehouseId === warehouseId)
+        : incomeExpenses;
 
       const { totalRemainingQuantity, totalInventoryValue } = calculatePhoneTotals(
         warehousePhones,
@@ -192,12 +221,19 @@ export const useStatisticsStore = create<StatisticsState>((set, get) => ({
         startDate,
         endDate
       );
+      const { totalIncome, totalExpense } = calculateIncomeExpense(
+        warehouseIncomeExpenses,
+        startDate,
+        endDate
+      );
 
       set({
         totalRemainingQuantity,
         totalInventoryValue,
         totalImportValue,
         totalExportValue,
+        totalIncome,
+        totalExpense,
         loading: false,
         ...(options
           ? {

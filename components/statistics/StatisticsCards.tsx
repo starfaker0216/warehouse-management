@@ -6,16 +6,20 @@ interface StatisticsCardsProps {
   totalInventoryValue: number;
   totalImportValue: number;
   totalExportValue: number;
+  totalIncome: number;
+  totalExpense: number;
 }
 
 export default function StatisticsCards({
   totalRemainingQuantity,
   totalInventoryValue,
   totalImportValue,
-  totalExportValue
+  totalExportValue,
+  totalIncome,
+  totalExpense
 }: StatisticsCardsProps) {
   return (
-    <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <StatisticsCard
         title="Tổng hàng tồn"
         value={totalRemainingQuantity}
@@ -106,6 +110,50 @@ export default function StatisticsCards({
           </svg>
         }
         iconBgColor="bg-purple-100 dark:bg-purple-900/30"
+        valueSize="text-xl"
+      />
+
+      <StatisticsCard
+        title="Tổng thu"
+        value={formatCurrency(totalIncome)}
+        icon={
+          <svg
+            className="h-6 w-6 text-emerald-600 dark:text-emerald-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+            />
+          </svg>
+        }
+        iconBgColor="bg-emerald-100 dark:bg-emerald-900/30"
+        valueSize="text-xl"
+      />
+
+      <StatisticsCard
+        title="Tổng chi"
+        value={formatCurrency(totalExpense)}
+        icon={
+          <svg
+            className="h-6 w-6 text-red-600 dark:text-red-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"
+            />
+          </svg>
+        }
+        iconBgColor="bg-red-100 dark:bg-red-900/30"
         valueSize="text-xl"
       />
     </div>

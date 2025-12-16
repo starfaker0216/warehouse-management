@@ -19,6 +19,8 @@ export default function StatisticsPage() {
     totalInventoryValue,
     totalImportValue,
     totalExportValue,
+    totalIncome,
+    totalExpense,
     loading,
     error,
     startDate,
@@ -147,6 +149,8 @@ export default function StatisticsPage() {
             totalInventoryValue={totalInventoryValue}
             totalImportValue={totalImportValue}
             totalExportValue={totalExportValue}
+            totalIncome={totalIncome}
+            totalExpense={totalExpense}
           />
         )}
       </div>
