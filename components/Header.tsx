@@ -28,6 +28,19 @@ export default function Header() {
     }
   ];
 
+  // Add Income/Expense link for admin and manager
+  if (
+    isAuthenticated &&
+    employee &&
+    (employee.role === "admin" || employee.role === "manager")
+  ) {
+    navItems.push({
+      label: "Thu / Chi",
+      href: "/income-expense",
+      ariaLabel: "Thu Chi"
+    });
+  }
+
   // Add Quản Lý link only for admin users
   if (isAuthenticated && employee?.role === "admin") {
     navItems.push({
