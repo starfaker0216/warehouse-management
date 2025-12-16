@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { getPhones, type Phone } from "../lib/phoneService";
 import { getImportRecords, type ImportRecord } from "../lib/importService";
 import { getExportRecords, type ExportRecord } from "../lib/exportService";
+import { getWarehouses } from "../lib/warehouseService";
 import { useAuthStore } from "./useAuthStore";
 import { formatDateInput, parseDate } from "../utils/dateUtils";
 
@@ -21,9 +22,11 @@ interface StatisticsState extends StatisticsTotals {
   endDate: Date | null;
   startDateInput: string;
   endDateInput: string;
-  fetchStatistics: (options?: { startDate?: Date | null; endDate?: Date | null }) => Promise<void>;
+  selectedWarehouseId: string | null;
+  fetchStatistics: (options?: { startDate?: Date | null; endDate?: Date | null; warehouseId?: string | null }) => Promise<void>;
   setStartDateInput: (value: string) => void;
   setEndDateInput: (value: string) => void;
+  setSelectedWarehouseId: (warehouseId: string | null) => void;
   applyDateFilter: () => Promise<void>;
   clearDateFilter: () => Promise<void>;
   resetError: () => void;
@@ -97,6 +100,7 @@ export const useStatisticsStore = create<StatisticsState>((set, get) => ({
   endDate: null,
   startDateInput: "",
   endDateInput: "",
+  selectedWarehouseId: null,
   totalRemainingQuantity: 0,
   totalInventoryValue: 0,
   totalImportValue: 0,
@@ -112,16 +116,24 @@ export const useStatisticsStore = create<StatisticsState>((set, get) => ({
     set({ endDateInput: formatDateInput(value) });
   },
 
+  setSelectedWarehouseId: (warehouseId) => {
+    set({ selectedWarehouseId: warehouseId });
+  },
+
   fetchStatistics: async (options) => {
     const startDate = options?.startDate ?? get().startDate;
     const endDate = options?.endDate ?? get().endDate;
+    const selectedWarehouseId = options?.warehouseId ?? get().selectedWarehouseId;
 
     set({ loading: true, error: null });
     try {
       const employee = useAuthStore.getState().employee;
-      const warehouseId = employee?.warehouseId;
+      // Use selected warehouse or fallback to employee's warehouse
+      const warehouseId = selectedWarehouseId || employee?.warehouseId || null;
 
-      if (!warehouseId) {
+      // For admin, if no warehouse selected, fetch all data
+      // For non-admin, require warehouseId
+      if (!employee?.role || (employee.role !== "admin" && !warehouseId)) {
         set({
           loading: false,
           error: "Không tìm thấy thông tin kho. Vui lòng đăng nhập lại."
@@ -129,21 +141,41 @@ export const useStatisticsStore = create<StatisticsState>((set, get) => ({
         return;
       }
 
-      const [phones, imports, exports] = await Promise.all([
-        getPhones(warehouseId),
+      // If warehouseId is provided, fetch phones for that warehouse
+      // Otherwise (admin viewing all), we need to fetch all phones
+      // Note: getPhones requires warehouseId, so we'll fetch all and filter
+      const [imports, exports] = await Promise.all([
         getImportRecords(),
         getExportRecords()
       ]);
 
-      const warehousePhones = phones.filter(
-        (phone) => !warehouseId || phone.warehouseId === warehouseId
-      );
-      const warehouseImports = imports.filter(
-        (record) => !warehouseId || record.warehouseId === warehouseId
-      );
-      const warehouseExports = exports.filter(
-        (record) => !warehouseId || record.warehouseId === warehouseId
-      );
+      // Fetch phones - if warehouseId is null (all), fetch from all warehouses
+      let phones: Phone[] = [];
+      if (warehouseId) {
+        phones = await getPhones(warehouseId);
+      } else if (employee.role === "admin") {
+        // Admin viewing all - fetch from all warehouses
+        const warehouses = await getWarehouses();
+        const allPhonesPromises = warehouses.map((w) => getPhones(w.id));
+        const allPhonesArrays = await Promise.all(allPhonesPromises);
+        phones = allPhonesArrays.flat();
+      } else {
+        // Non-admin fallback to their warehouse
+        const defaultWarehouseId = employee.warehouseId;
+        if (defaultWarehouseId) {
+          phones = await getPhones(defaultWarehouseId);
+        }
+      }
+
+      const warehousePhones = warehouseId
+        ? phones.filter((phone) => phone.warehouseId === warehouseId)
+        : phones;
+      const warehouseImports = warehouseId
+        ? imports.filter((record) => record.warehouseId === warehouseId)
+        : imports;
+      const warehouseExports = warehouseId
+        ? exports.filter((record) => record.warehouseId === warehouseId)
+        : exports;
 
       const { totalRemainingQuantity, totalInventoryValue } = calculatePhoneTotals(
         warehousePhones,
@@ -170,7 +202,8 @@ export const useStatisticsStore = create<StatisticsState>((set, get) => ({
         ...(options
           ? {
               startDate,
-              endDate
+              endDate,
+              ...(options.warehouseId !== undefined && { selectedWarehouseId: options.warehouseId })
             }
           : {})
       });
@@ -184,7 +217,7 @@ export const useStatisticsStore = create<StatisticsState>((set, get) => ({
   },
 
   applyDateFilter: async () => {
-    const { startDateInput, endDateInput } = get();
+    const { startDateInput, endDateInput, selectedWarehouseId } = get();
     const parsedStart = startDateInput ? parseDate(startDateInput) : null;
     const parsedEnd = endDateInput ? parseDate(endDateInput) : null;
 
@@ -204,10 +237,11 @@ export const useStatisticsStore = create<StatisticsState>((set, get) => ({
     }
 
     set({ startDate: parsedStart, endDate: parsedEnd, error: null });
-    await get().fetchStatistics({ startDate: parsedStart, endDate: parsedEnd });
+    await get().fetchStatistics({ startDate: parsedStart, endDate: parsedEnd, warehouseId: selectedWarehouseId });
   },
 
   clearDateFilter: async () => {
+    const { selectedWarehouseId } = get();
     set({
       startDate: null,
       endDate: null,
@@ -215,7 +249,7 @@ export const useStatisticsStore = create<StatisticsState>((set, get) => ({
       endDateInput: "",
       error: null
     });
-    await get().fetchStatistics({ startDate: null, endDate: null });
+    await get().fetchStatistics({ startDate: null, endDate: null, warehouseId: selectedWarehouseId });
   }
 }));
 

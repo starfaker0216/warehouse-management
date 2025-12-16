@@ -4,11 +4,16 @@ import React, { useState } from "react";
 import { formatDate, formatDateInput, parseDate } from "../../utils/dateUtils";
 import DatePickerModal from "../import/DatePickerModal";
 
+import { Warehouse } from "../../lib/warehouseService";
+
 interface DateRangeFilterProps {
   startDateInput: string;
   endDateInput: string;
+  warehouses: Warehouse[];
+  selectedWarehouseId: string | null;
   onStartDateChange: (value: string) => void;
   onEndDateChange: (value: string) => void;
+  onWarehouseChange: (warehouseId: string | null) => void;
   onApply: () => void;
   onClear: () => void;
 }
@@ -16,8 +21,11 @@ interface DateRangeFilterProps {
 export default function DateRangeFilter({
   startDateInput,
   endDateInput,
+  warehouses,
+  selectedWarehouseId,
   onStartDateChange,
   onEndDateChange,
+  onWarehouseChange,
   onApply,
   onClear
 }: DateRangeFilterProps) {
@@ -65,6 +73,24 @@ export default function DateRangeFilter({
   return (
     <div className="mb-6 rounded-lg bg-white p-4 shadow-sm dark:bg-zinc-900">
       <div className="flex flex-col gap-4 md:flex-row md:items-end">
+        <div className="flex-1">
+          <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Kho
+          </label>
+          <select
+            value={selectedWarehouseId || "all"}
+            onChange={(e) => onWarehouseChange(e.target.value === "all" ? null : e.target.value)}
+            className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
+          >
+            <option value="all">Tất cả kho</option>
+            {warehouses.map((warehouse) => (
+              <option key={warehouse.id} value={warehouse.id}>
+                {warehouse.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div className="flex-1">
           <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
             Ngày bắt đầu

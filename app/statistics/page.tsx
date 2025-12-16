@@ -8,6 +8,7 @@ import ErrorDisplay from "../../components/common/ErrorDisplay";
 import StatisticsCards from "../../components/statistics/StatisticsCards";
 import DateRangeFilter from "../../components/statistics/DateRangeFilter";
 import { useStatisticsStore } from "../../stores/useStatisticsStore";
+import { useWarehouseStore } from "../../stores/useWarehouseStore";
 import { formatDate } from "../../utils/dateUtils";
 
 export default function StatisticsPage() {
@@ -24,13 +25,16 @@ export default function StatisticsPage() {
     endDate,
     startDateInput,
     endDateInput,
+    selectedWarehouseId,
     setStartDateInput,
     setEndDateInput,
+    setSelectedWarehouseId,
     applyDateFilter,
     fetchStatistics,
     clearDateFilter,
     resetError
   } = useStatisticsStore();
+  const { warehouses, fetchWarehouses } = useWarehouseStore();
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -40,12 +44,28 @@ export default function StatisticsPage() {
 
   useEffect(() => {
     if (!authLoading && isAuthenticated && employee?.role === "admin") {
+      if (warehouses.length === 0) {
+        fetchWarehouses();
+      }
       fetchStatistics();
     }
-  }, [authLoading, isAuthenticated, employee?.role, fetchStatistics]);
+  }, [
+    authLoading,
+    isAuthenticated,
+    employee?.role,
+    fetchStatistics,
+    warehouses.length,
+    fetchWarehouses
+  ]);
 
   const handleClearFilter = () => {
     clearDateFilter();
+  };
+
+  const handleWarehouseChange = async (warehouseId: string | null) => {
+    setSelectedWarehouseId(warehouseId);
+    const { startDate, endDate } = useStatisticsStore.getState();
+    await fetchStatistics({ startDate, endDate, warehouseId });
   };
 
   if (authLoading) {
@@ -95,15 +115,21 @@ export default function StatisticsPage() {
         <DateRangeFilter
           startDateInput={startDateInput}
           endDateInput={endDateInput}
+          warehouses={warehouses}
+          selectedWarehouseId={selectedWarehouseId}
           onStartDateChange={setStartDateInput}
           onEndDateChange={setEndDateInput}
+          onWarehouseChange={handleWarehouseChange}
           onApply={applyDateFilter}
           onClear={handleClearFilter}
         />
 
         <div className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
-          <span className="font-medium">Kho:</span>{" "}
-          {employee?.warehouseId || "Chưa gán kho"}
+          <span className="font-medium">Kho đang xem:</span>{" "}
+          {selectedWarehouseId
+            ? warehouses.find((w) => w.id === selectedWarehouseId)?.name ||
+              selectedWarehouseId
+            : "Tất cả kho"}
           {(startDate || endDate) && (
             <span className="ml-3">
               Khoảng thời gian:{" "}
@@ -127,4 +153,3 @@ export default function StatisticsPage() {
     </div>
   );
 }
-
