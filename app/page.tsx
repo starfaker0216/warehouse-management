@@ -29,10 +29,18 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Fetch phones với search và filter
+  // Fetch phones với search và filter - chỉ khi auth đã load xong
   useEffect(() => {
-    fetchPhones(debouncedSearchTerm, filterStatus);
-  }, [fetchPhones, debouncedSearchTerm, filterStatus]);
+    if (!authLoading && isAuthenticated) {
+      fetchPhones(debouncedSearchTerm, filterStatus);
+    }
+  }, [
+    authLoading,
+    isAuthenticated,
+    fetchPhones,
+    debouncedSearchTerm,
+    filterStatus
+  ]);
 
   // Redirect to login if not authenticated
   useEffect(() => {

@@ -32,8 +32,25 @@ export const usePhoneStore = create<PhoneState>((set) => ({
   fetchPhones: async (searchTerm?: string, filterStatus?: string) => {
     set({ loading: true, error: null });
     try {
-      // Get warehouseId from logged in employee
-      const employee = useAuthStore.getState().employee;
+      // Ensure auth is initialized first
+      const authState = useAuthStore.getState();
+      if (authState.loading) {
+        // If auth is still loading, initialize it
+        authState.initialize();
+      }
+
+      // Wait a bit for auth to initialize if needed
+      let employee = authState.employee;
+      let retries = 0;
+      const maxRetries = 10;
+
+      while (!employee && retries < maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        const currentAuthState = useAuthStore.getState();
+        employee = currentAuthState.employee;
+        retries++;
+      }
+
       const warehouseId = employee?.warehouseId;
 
       if (!warehouseId) {
