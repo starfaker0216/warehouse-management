@@ -276,7 +276,7 @@ export default function EditPhoneModal({
                 onClick={handleAddColor}
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
               >
-                + Thêm màu
+                + Thêm mới
               </button>
             </div>
 
@@ -289,7 +289,7 @@ export default function EditPhoneModal({
                 {data.map((item, index) => (
                   <div
                     key={index}
-                    className="flex gap-3 rounded-lg border border-zinc-300 p-3 dark:border-zinc-700"
+                    className="flex flex-col gap-3 rounded-lg border border-zinc-300 p-3 md:flex-row dark:border-zinc-700"
                   >
                     <div className="flex-1">
                       <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
@@ -336,11 +336,11 @@ export default function EditPhoneModal({
                         maxSuggestions={3}
                       />
                     </div>
-                    <div className="flex items-end">
+                    <div className="flex items-end md:items-end">
                       <button
                         type="button"
                         onClick={() => handleRemoveColor(index)}
-                        className="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:bg-zinc-800 dark:text-red-400 dark:hover:bg-red-900/20"
+                        className="w-[100px] rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:bg-zinc-800 dark:text-red-400 dark:hover:bg-red-900/20 md:w-auto"
                       >
                         Xóa
                       </button>

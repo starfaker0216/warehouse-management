@@ -8,6 +8,7 @@ import { usePhoneStatistics } from "../hooks/usePhoneStatistics";
 import StatisticsCards from "../components/home/StatisticsCards";
 import PhoneFilters from "../components/home/PhoneFilters";
 import PhoneTable from "../components/home/PhoneTable";
+import ListPhone from "../components/home/ListPhone";
 import Loading from "../components/common/Loading";
 import ErrorDisplay from "../components/common/ErrorDisplay";
 
@@ -84,16 +85,27 @@ export default function Home() {
           onFilterChange={setFilterStatus}
         />
 
-        {/* Inventory Table */}
-        <PhoneTable
-          phones={phones}
-          searchTerm={debouncedSearchTerm}
-          filterStatus={filterStatus}
-        />
+        {/* Inventory Table - Desktop */}
+        <div className="hidden md:block">
+          <PhoneTable
+            phones={phones}
+            searchTerm={debouncedSearchTerm}
+            filterStatus={filterStatus}
+          />
+        </div>
 
         {/* Summary */}
         <div className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
           Hiển thị {phones.length} sản phẩm
+        </div>
+
+        {/* Inventory List - Mobile */}
+        <div className="md:hidden mt-6">
+          <ListPhone
+            phones={phones}
+            searchTerm={debouncedSearchTerm}
+            filterStatus={filterStatus}
+          />
         </div>
       </div>
     </div>

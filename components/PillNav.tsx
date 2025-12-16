@@ -423,7 +423,7 @@ const PillNav: React.FC<PillNavProps> = ({
           onClick={toggleMobileMenu}
           aria-label="Toggle menu"
           aria-expanded={isMobileMenuOpen}
-          className="md:hidden rounded-full border-0 flex flex-col items-center justify-center gap-1 cursor-pointer p-0 relative"
+          className="md:hidden ml-2 rounded-full border-0 flex flex-col items-center justify-center gap-1 cursor-pointer p-0 relative"
           style={{
             width: "var(--nav-h)",
             height: "var(--nav-h)",
@@ -443,13 +443,13 @@ const PillNav: React.FC<PillNavProps> = ({
 
       <div
         ref={mobileMenuRef}
-        className="md:hidden absolute top-[3em] left-4 right-4 rounded-[27px] shadow-[0_8px_32px_rgba(0,0,0,0.12)] z-[998] origin-top"
+        className="md:hidden absolute top-[3em] rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.25)] z-[998] origin-top"
         style={{
           ...cssVars,
           background: "var(--base, #f0f0f0)"
         }}
       >
-        <ul className="list-none m-0 p-[3px] flex flex-col gap-[3px]">
+        <ul className="list-none m-0 p-[4px] flex flex-col gap-[3px]">
           {items.map((item) => {
             const defaultStyle: React.CSSProperties = {
               background: "var(--pill-bg, #fff)",
@@ -465,7 +465,7 @@ const PillNav: React.FC<PillNavProps> = ({
             };
 
             const linkClasses =
-              "block py-3 px-4 text-[16px] font-medium rounded-[50px] transition-all duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]";
+              "block py-1 px-3 text-[16px] font-medium rounded-xl transition-all duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]";
 
             return (
               <li key={item.href}>
