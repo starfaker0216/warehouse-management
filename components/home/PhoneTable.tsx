@@ -50,6 +50,10 @@ export default function PhoneTable({
     await fetchListPhoneDetails(searchTerm);
   };
 
+  const handleDeleted = async () => {
+    await fetchListPhoneDetails(searchTerm);
+  };
+
   const handleRowClick = (phoneDetail: PhoneDetail, e: React.MouseEvent) => {
     // Don't navigate if clicking on the edit button
     const target = e.target as HTMLElement;
@@ -157,6 +161,7 @@ export default function PhoneTable({
         onClose={handleCloseModal}
         phoneDetail={selectedPhoneDetail}
         onSave={handleSave}
+        onDeleted={handleDeleted}
       />
     </div>
   );

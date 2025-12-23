@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { PhoneDetail } from "../../lib/phoneDetailService";
+import { recyclePhoneDetail } from "../../lib/phoneRecycleService";
 import {
   formatCurrencyInput,
   parseCurrencyInput
@@ -24,13 +25,15 @@ interface EditPhoneDetailModalProps {
       imei: string;
     }
   ) => Promise<void>;
+  onDeleted?: () => Promise<void>;
 }
 
 export default function EditPhoneDetailModal({
   isOpen,
   onClose,
   phoneDetail,
-  onSave
+  onSave,
+  onDeleted
 }: EditPhoneDetailModalProps) {
   const [color, setColor] = useState("");
   const [status, setStatus] = useState("");
@@ -38,6 +41,7 @@ export default function EditPhoneDetailModal({
   const [salePrice, setSalePrice] = useState(0);
   const [salePriceInputValue, setSalePriceInputValue] = useState("");
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const { colors, fetchColors, addColor } = useConfigStore();
 
   // Fetch colors when modal opens
@@ -115,6 +119,30 @@ export default function EditPhoneDetailModal({
   };
 
   if (!isOpen || !phoneDetail) return null;
+
+  const handleDelete = async () => {
+    if (!phoneDetail) return;
+
+    const confirmed = window.confirm("Bạn có chắc chắn muốn xóa máy này?");
+    if (!confirmed) return;
+
+    setDeleting(true);
+    try {
+      await recyclePhoneDetail(phoneDetail);
+
+      if (onDeleted) {
+        await onDeleted();
+      }
+
+      toast.success("Đã chuyển máy vào kho thu hồi");
+      onClose();
+    } catch (error) {
+      console.error("Error recycling phone detail:", error);
+      toast.error("Không thể chuyển vào kho thu hồi");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -217,9 +245,19 @@ export default function EditPhoneDetailModal({
             >
               Hủy
             </button>
+
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={loading || deleting}
+              className="rounded-lg border border-red-500 bg-white px-6 py-2 text-sm font-medium text-red-600 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 dark:border-red-500/70 dark:bg-zinc-800 dark:text-red-300 dark:hover:bg-red-500/10"
+            >
+              {deleting ? "Đang xoá..." : "Xoá"}
+            </button>
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || deleting}
               className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
             >
               {loading ? "Đang lưu..." : "Lưu thay đổi"}
