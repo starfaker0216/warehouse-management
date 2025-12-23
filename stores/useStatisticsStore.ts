@@ -3,9 +3,12 @@
 import { create } from "zustand";
 import {
   getPhoneDetailsByWarehouseId,
-  getPhoneDetail,
   type PhoneDetail
 } from "../lib/phoneDetailService";
+import {
+  getPhoneExportedsByWarehouseId,
+  type PhoneExported
+} from "../lib/phoneExportedService";
 import { getImportRecords, type ImportRecord } from "../lib/importService";
 import { getExportRecords, type ExportRecord } from "../lib/exportService";
 import {
@@ -87,27 +90,37 @@ const calculatePhoneTotals = (
 };
 
 const calculateImportValue = async (
-  imports: ImportRecord[],
+  phoneDetails: PhoneDetail[],
+  phoneExporteds: PhoneExported[],
   start?: Date | null,
   end?: Date | null
 ): Promise<number> => {
-  const filtered = imports.filter((record) =>
-    isWithinRange(record.importDate, start, end)
+  const matchingPhoneDetails = phoneDetails.filter((phoneDetail) => {
+    const isInDateRange = isWithinRange(phoneDetail.createdAt, start, end);
+    return isInDateRange;
+  });
+
+  const matchingPhoneExporteds = phoneExporteds.filter((phoneExported) => {
+    const isInDateRange = isWithinRange(
+      phoneExported.originalCreatedAt,
+      start,
+      end
+    );
+    return isInDateRange;
+  });
+
+  // Tính tổng importPrice từ cả phoneDetails và phoneExporteds
+  const phoneDetailsSum = matchingPhoneDetails.reduce(
+    (sum, phoneDetail) => sum + (phoneDetail.importPrice || 0),
+    0
   );
 
-  // Lấy tất cả phoneDetailIds từ các ImportRecord đã filter
-  const phoneDetailIds = filtered.flatMap(
-    (record) => record.phoneDetailIds || []
+  const phoneExportedsSum = matchingPhoneExporteds.reduce(
+    (sum, phoneExported) => sum + (phoneExported.importPrice || 0),
+    0
   );
 
-  // Fetch các PhoneDetail tương ứng và tính tổng importPrice
-  const phoneDetailPromises = phoneDetailIds.map((id) => getPhoneDetail(id));
-  const phoneDetails = await Promise.all(phoneDetailPromises);
-
-  return phoneDetails.reduce((sum, phoneDetail) => {
-    if (!phoneDetail) return sum;
-    return sum + (phoneDetail.importPrice || 0);
-  }, 0);
+  return phoneDetailsSum + phoneExportedsSum;
 };
 
 const calculateExportValue = (
@@ -194,6 +207,30 @@ const fetchPhoneDetailsForWarehouse = async (
   return [];
 };
 
+// Helper: Fetch phone exporteds for a specific warehouse or all warehouses
+const fetchPhoneExportedsForWarehouse = async (
+  warehouseId: string | null,
+  employeeRole: string | undefined
+): Promise<PhoneExported[]> => {
+  if (warehouseId) {
+    return await getPhoneExportedsByWarehouseId(warehouseId);
+  }
+
+  if (employeeRole === "admin") {
+    // Admin viewing all - fetch from all warehouses
+    const warehouses = await getWarehouses();
+    const allPhoneExportedsPromises = warehouses.map((w) =>
+      getPhoneExportedsByWarehouseId(w.id)
+    );
+    const allPhoneExportedsArrays = await Promise.all(
+      allPhoneExportedsPromises
+    );
+    return allPhoneExportedsArrays.flat();
+  }
+
+  return [];
+};
+
 // Helper: Filter data by warehouse
 const filterDataByWarehouse = <T extends { warehouseId?: string }>(
   data: T[],
@@ -206,6 +243,7 @@ const filterDataByWarehouse = <T extends { warehouseId?: string }>(
 // Helper: Calculate all statistics values
 const calculateAllStatistics = async (
   phoneDetails: PhoneDetail[],
+  phoneExporteds: PhoneExported[],
   imports: ImportRecord[],
   exports: ExportRecord[],
   incomeExpenses: IncomeExpenseRecord[],
@@ -220,7 +258,7 @@ const calculateAllStatistics = async (
 
   const [totalImportValue, totalExportValue, { totalIncome, totalExpense }] =
     await Promise.all([
-      calculateImportValue(imports, startDate, endDate),
+      calculateImportValue(phoneDetails, phoneExporteds, startDate, endDate),
       Promise.resolve(calculateExportValue(exports, startDate, endDate)),
       Promise.resolve(
         calculateIncomeExpense(incomeExpenses, startDate, endDate)
@@ -313,17 +351,22 @@ export const useStatisticsStore = create<StatisticsState>((set, get) => ({
       }
 
       // Fetch all required data in parallel
-      const [imports, exports, incomeExpenses, phoneDetails] =
+      const [imports, exports, incomeExpenses, phoneDetails, phoneExporteds] =
         await Promise.all([
           getImportRecords(),
           getExportRecords(),
           getIncomeExpenseRecords(),
-          fetchPhoneDetailsForWarehouse(warehouseId, employee?.role)
+          fetchPhoneDetailsForWarehouse(warehouseId, employee?.role),
+          fetchPhoneExportedsForWarehouse(warehouseId, employee?.role)
         ]);
 
       // Filter data by warehouse
       const warehousePhoneDetails = filterDataByWarehouse(
         phoneDetails,
+        warehouseId
+      );
+      const warehousePhoneExporteds = filterDataByWarehouse(
+        phoneExporteds,
         warehouseId
       );
       const warehouseImports = filterDataByWarehouse(imports, warehouseId);
@@ -336,6 +379,7 @@ export const useStatisticsStore = create<StatisticsState>((set, get) => ({
       // Calculate all statistics
       const statistics = await calculateAllStatistics(
         warehousePhoneDetails,
+        warehousePhoneExporteds,
         warehouseImports,
         warehouseExports,
         warehouseIncomeExpenses,

@@ -1,7 +1,9 @@
 import {
   collection,
-  doc,
+  getDocs,
   addDoc,
+  query,
+  where,
   Timestamp,
   QueryDocumentSnapshot,
   DocumentData
@@ -110,6 +112,21 @@ export const addPhoneExported = async (
     return docRef.id;
   } catch (error) {
     console.error("Error adding phone exported:", error);
+    throw error;
+  }
+};
+
+// Get phone exporteds by warehouseId
+export const getPhoneExportedsByWarehouseId = async (
+  warehouseId: string
+): Promise<PhoneExported[]> => {
+  try {
+    const phoneExportedsRef = collection(db, "phoneExporteds");
+    const q = query(phoneExportedsRef, where("warehouseId", "==", warehouseId));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(docToPhoneExported);
+  } catch (error) {
+    console.error("Error getting phone exporteds by warehouseId:", error);
     throw error;
   }
 };
