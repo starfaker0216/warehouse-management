@@ -3,11 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useImportForm } from "../../hooks/useImportForm";
 import PhoneSelector from "../../components/PhoneSelector";
-import PhoneSelectorField from "../../components/import/PhoneSelectorField";
+import PhoneTypeField from "../../components/import/PhoneTypeField";
 import ColorSelectorField from "../../components/import/ColorSelectorField";
 import SupplierSelectorField from "../../components/import/SupplierSelectorField";
-import PriceInputField from "../../components/import/PriceInputField";
 import DateInputField from "../../components/import/DateInputField";
+import ItemPriceInput from "../../components/import/ItemPriceInput";
 import { Toaster } from "react-hot-toast";
 import { formatDate } from "../../utils/dateUtils";
 import { useEffect } from "react";
@@ -17,7 +17,6 @@ export default function ImportPage() {
   const {
     formData,
     setFormData,
-    phones,
     colors,
     suppliers,
     warehouseName,
@@ -33,10 +32,6 @@ export default function ImportPage() {
     error,
     showPhoneSelector,
     setShowPhoneSelector,
-    priceInputValue,
-    setPriceInputValue,
-    isPriceFocused,
-    setIsPriceFocused,
     dateInputValue,
     setDateInputValue,
     isDateFocused,
@@ -100,25 +95,11 @@ export default function ImportPage() {
             )}
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              {/* Phone Selector Fields */}
-              <PhoneSelectorField
-                phones={phones}
-                phoneId={formData.phoneId}
+              {/* Loại Máy */}
+              <PhoneTypeField
                 phoneType={formData.phoneType}
                 onOpenSelector={() => setShowPhoneSelector(true)}
               />
-
-              {/* Color Selector */}
-              <ColorSelectorField
-                colors={colors}
-                selectedColor={formData.color}
-                newColor={newColor}
-                showAddColor={showAddColor}
-                onColorChange={(color) => setFormData({ ...formData, color })}
-                onNewColorChange={setNewColor}
-                onShowAddColor={setShowAddColor}
-              />
-
               {/* Số Lượng */}
               <div>
                 <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
@@ -138,52 +119,6 @@ export default function ImportPage() {
                   className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
-
-              {/* IMEI */}
-              <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  IMEI <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.imei}
-                  onChange={(e) =>
-                    setFormData({ ...formData, imei: e.target.value })
-                  }
-                  placeholder="Nhập IMEI"
-                  className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
-                />
-              </div>
-
-              {/* Loại IMEI */}
-              <div>
-                <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Loại IMEI <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.imeiType}
-                  onChange={(e) =>
-                    setFormData({ ...formData, imeiType: e.target.value })
-                  }
-                  placeholder="Ví dụ: IMEI1, IMEI2, Dual IMEI..."
-                  className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
-                />
-              </div>
-
-              {/* Price Input */}
-              <PriceInputField
-                importPrice={formData.importPrice}
-                priceInputValue={priceInputValue}
-                isPriceFocused={isPriceFocused}
-                onPriceChange={(price) =>
-                  setFormData({ ...formData, importPrice: price })
-                }
-                onPriceInputValueChange={setPriceInputValue}
-                onPriceFocus={setIsPriceFocused}
-              />
 
               {/* Date Input */}
               <DateInputField
@@ -240,6 +175,119 @@ export default function ImportPage() {
                 />
               </div>
             </div>
+
+            {/* Dynamic Items List */}
+            {formData.quantity > 0 &&
+              formData.items &&
+              formData.items.length > 0 && (
+                <div className="mt-6 space-y-6">
+                  <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                    Thông tin thiết bị
+                  </h3>
+                  {formData.items.map((item, index) => (
+                    <div
+                      key={index}
+                      className="rounded-lg border border-zinc-200 bg-zinc-50 p-6 dark:border-zinc-800 dark:bg-zinc-800/50"
+                    >
+                      <h4 className="mb-4 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                        Thiết bị {index + 1}
+                      </h4>
+                      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                        {/* Color Selector */}
+                        <ColorSelectorField
+                          colors={colors}
+                          selectedColor={item.color}
+                          newColor={newColor}
+                          showAddColor={showAddColor}
+                          onColorChange={(color) => {
+                            const updatedItems = [...formData.items];
+                            updatedItems[index] = {
+                              ...updatedItems[index],
+                              color
+                            };
+                            setFormData({ ...formData, items: updatedItems });
+                          }}
+                          onNewColorChange={setNewColor}
+                          onShowAddColor={setShowAddColor}
+                        />
+
+                        {/* IMEI */}
+                        <div>
+                          <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                            IMEI <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={item.imei}
+                            onChange={(e) => {
+                              const updatedItems = [...formData.items];
+                              updatedItems[index] = {
+                                ...updatedItems[index],
+                                imei: e.target.value
+                              };
+                              setFormData({ ...formData, items: updatedItems });
+                            }}
+                            placeholder="Nhập IMEI"
+                            className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
+                          />
+                        </div>
+
+                        {/* Giá Nhập */}
+                        <ItemPriceInput
+                          value={item.importPrice}
+                          index={index}
+                          label="Giá Nhập"
+                          onValueChange={(price) => {
+                            const updatedItems = [...formData.items];
+                            updatedItems[index] = {
+                              ...updatedItems[index],
+                              importPrice: price
+                            };
+                            setFormData({ ...formData, items: updatedItems });
+                          }}
+                        />
+
+                        {/* Giá Bán */}
+                        <ItemPriceInput
+                          value={item.salePrice}
+                          index={index}
+                          label="Giá Bán"
+                          onValueChange={(price) => {
+                            const updatedItems = [...formData.items];
+                            updatedItems[index] = {
+                              ...updatedItems[index],
+                              salePrice: price
+                            };
+                            setFormData({ ...formData, items: updatedItems });
+                          }}
+                        />
+
+                        {/* Tình trạng máy */}
+                        <div>
+                          <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                            Tình trạng máy
+                          </label>
+                          <input
+                            type="text"
+                            value={item.status}
+                            onChange={(e) => {
+                              const updatedItems = [...formData.items];
+                              updatedItems[index] = {
+                                ...updatedItems[index],
+                                status: e.target.value
+                              };
+                              setFormData({ ...formData, items: updatedItems });
+                            }}
+                            placeholder="Nhập tình trạng máy"
+                            className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
             <div className="mt-6 flex justify-end gap-3">
               <button

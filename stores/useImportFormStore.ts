@@ -1,34 +1,22 @@
 import { create } from "zustand";
 import { addImportRecord } from "../lib/importService";
-import { updatePhone as updatePhoneService } from "../lib/phoneService";
-import { usePhoneStore } from "./usePhoneStore";
-import { useConfigStore } from "./useConfigStore";
-import { useAuthStore } from "./useAuthStore";
+import { ImportFormData } from "../types/importTypes";
+import {
+  validateFormData,
+  validateItems,
+  processSupplierAndColors,
+  getEmployeeInfo,
+  updatePhoneInventory
+} from "./helper/importFunction";
 import toast from "react-hot-toast";
-
-export interface ImportFormData {
-  phoneId: string;
-  importDate: Date;
-  phoneType: string;
-  quantity: number;
-  imei: string;
-  color: string;
-  importPrice: number;
-  supplier: string;
-  imeiType: string;
-  note: string;
-}
 
 const initialFormData: ImportFormData = {
   phoneId: "",
   importDate: new Date(),
   phoneType: "",
   quantity: 0,
-  imei: "",
-  color: "",
-  importPrice: 0,
+  items: [],
   supplier: "",
-  imeiType: "",
   note: ""
 };
 
@@ -79,9 +67,36 @@ export const useImportFormStore = create<ImportFormState>((set, get) => ({
   isDateFocused: false,
 
   setFormData: (data) =>
-    set((state) => ({
-      formData: { ...state.formData, ...data }
-    })),
+    set((state) => {
+      const newFormData = { ...state.formData, ...data };
+      // Auto-update items array when quantity changes
+      if (
+        data.quantity !== undefined &&
+        data.quantity !== state.formData.quantity
+      ) {
+        const newQuantity = data.quantity || 0;
+        const currentItems = newFormData.items || [];
+
+        if (newQuantity > currentItems.length) {
+          // Add new empty items
+          const newItems = [...currentItems];
+          for (let i = currentItems.length; i < newQuantity; i++) {
+            newItems.push({
+              color: "",
+              imei: "",
+              importPrice: 0,
+              salePrice: 0,
+              status: ""
+            });
+          }
+          newFormData.items = newItems;
+        } else if (newQuantity < currentItems.length) {
+          // Remove excess items
+          newFormData.items = currentItems.slice(0, newQuantity);
+        }
+      }
+      return { formData: newFormData };
+    }),
 
   setNewColor: (color) => set({ newColor: color }),
   setNewSupplier: (supplier) => set({ newSupplier: supplier }),
@@ -121,111 +136,57 @@ export const useImportFormStore = create<ImportFormState>((set, get) => ({
     const state = get();
     set({ error: null, loading: true });
 
-    if (!state.formData.color || !state.formData.color.trim()) {
-      toast.error("Vui lòng chọn màu sắc!");
-      set({ loading: false });
+    const setLoading = (loading: boolean) => set({ loading });
+
+    // Validate form data
+    if (!validateFormData(state.formData, setLoading)) {
       return;
     }
 
-    if (!state.formData.supplier || !state.formData.supplier.trim()) {
-      toast.error("Vui lòng chọn nhà cung cấp!");
-      set({ loading: false });
+    // Validate all items
+    if (!validateItems(state.formData.items, setLoading)) {
       return;
     }
 
     try {
-      const colorName =
-        state.showAddColor && state.newColor.trim()
-          ? state.newColor.trim()
-          : state.formData.color?.trim() || "";
+      // Process supplier and colors
+      const supplierName = await processSupplierAndColors(
+        state.formData.items,
+        state.formData.supplier,
+        state.newSupplier,
+        state.showAddSupplier
+      );
 
-      const supplierName =
-        state.showAddSupplier && state.newSupplier.trim()
-          ? state.newSupplier.trim()
-          : state.formData.supplier?.trim() || "";
-
-      const updatedFormData = {
-        ...state.formData,
-        color: colorName,
-        supplier: supplierName
-      };
-
-      // Process color and supplier
-      await useConfigStore
-        .getState()
-        .processColorAndSupplier(colorName, supplierName);
-
-      // Reset add new states
-      if (state.showAddColor && state.newColor.trim()) {
-        set({ newColor: "", showAddColor: false });
-      }
+      // Reset add new supplier state
       if (state.showAddSupplier && state.newSupplier.trim()) {
         set({ newSupplier: "", showAddSupplier: false });
       }
 
       // Get employee info
-      const employee = useAuthStore.getState().employee;
-      const employeeId = employee?.id || "";
-      const employeeName = employee?.name || "";
-      const warehouseId = employee?.warehouseId || undefined;
+      const { employeeId, employeeName, warehouseId } = getEmployeeInfo();
 
       // Save import record
       await addImportRecord({
-        ...updatedFormData,
+        phoneId: state.formData.phoneId,
+        importDate: state.formData.importDate,
+        phoneType: state.formData.phoneType,
+        quantity: state.formData.quantity,
+        items: state.formData.items,
+        supplier: supplierName,
+        note: state.formData.note,
         employeeId,
         employeeName,
         ...(warehouseId && { warehouseId })
       });
 
       // Update phone inventory
-      const phones = usePhoneStore.getState().phones;
-      if (
-        updatedFormData.phoneId &&
-        updatedFormData.color &&
-        updatedFormData.quantity > 0
-      ) {
-        const selectedPhone = phones.find(
-          (p) => p.id === updatedFormData.phoneId
-        );
-        if (selectedPhone) {
-          const updatedData = [...selectedPhone.data];
-          const colorIndex = updatedData.findIndex(
-            (item) => item.color === updatedFormData.color
-          );
+      await updatePhoneInventory(
+        state.formData.phoneId,
+        state.formData.items,
+        state.formData.quantity
+      );
 
-          if (colorIndex >= 0) {
-            updatedData[colorIndex] = {
-              ...updatedData[colorIndex],
-              quantity:
-                updatedData[colorIndex].quantity + updatedFormData.quantity
-            };
-          } else {
-            updatedData.push({
-              color: updatedFormData.color,
-              quantity: updatedFormData.quantity,
-              price: 0
-            });
-          }
-
-          const newTotalQuantity =
-            selectedPhone.totalQuantity + updatedFormData.quantity;
-
-          await updatePhoneService(
-            updatedFormData.phoneId,
-            {
-              data: updatedData,
-              totalQuantity: newTotalQuantity
-            },
-            employeeId,
-            employeeName
-          );
-
-          // Refresh phones
-          await usePhoneStore.getState().fetchPhones();
-        }
-      }
-
-      // Reset form
+      // Reset form and show success
       get().resetForm();
       toast.success("Phiếu nhập hàng đã được tạo thành công!");
     } catch (err) {

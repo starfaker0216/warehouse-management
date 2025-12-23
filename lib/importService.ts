@@ -12,6 +12,7 @@ import {
   DocumentData
 } from "firebase/firestore";
 import { db } from "./firebase";
+import { ImportItem } from "@/types/importTypes";
 
 export interface ImportRecord {
   id: string;
@@ -19,11 +20,8 @@ export interface ImportRecord {
   importDate: Date; // ngày nhập
   phoneType: string; // loại máy
   quantity: number; // số lượng
-  imei: string; // imei
-  color: string; // màu sắc
-  importPrice: number; // giá nhập
+  items: ImportItem[]; // danh sách các thiết bị (màu sắc, imei, giá nhập)
   supplier: string; // nhà cung cấp
-  imeiType: string; // loại imei
   note: string; // ghi chú
   employeeId: string; // id người nhập dữ liệu
   employeeName: string; // tên người nhập dữ liệu
@@ -37,17 +35,37 @@ const docToImportRecord = (
   doc: QueryDocumentSnapshot<DocumentData>
 ): ImportRecord => {
   const data = doc.data();
+  // Support both old format (single item) and new format (items array)
+  let items: ImportItem[] = [];
+  if (data.items && Array.isArray(data.items)) {
+    items = data.items.map((item: Partial<ImportItem>) => ({
+      color: item.color || "",
+      imei: item.imei || "",
+      importPrice: item.importPrice || 0,
+      salePrice: item.salePrice || 0,
+      status: item.status || ""
+    }));
+  } else if (data.color || data.imei || data.importPrice) {
+    // Legacy format - convert to items array
+    items = [
+      {
+        color: data.color || "",
+        imei: data.imei || "",
+        importPrice: data.importPrice || 0,
+        salePrice: data.salePrice || 0,
+        status: data.status || ""
+      }
+    ];
+  }
+
   return {
     id: doc.id,
     phoneId: data.phoneId || "",
     importDate: data.importDate?.toDate() || new Date(),
     phoneType: data.phoneType || "",
-    quantity: data.quantity || 0,
-    imei: data.imei || "",
-    color: data.color || "",
-    importPrice: data.importPrice || 0,
+    quantity: data.quantity || items.length || 0,
+    items,
     supplier: data.supplier || "",
-    imeiType: data.imeiType || "",
     note: data.note || "",
     employeeId: data.employeeId || "",
     employeeName: data.employeeName || "",
