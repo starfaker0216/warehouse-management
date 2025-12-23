@@ -3,7 +3,8 @@ import {
   Phone,
   addPhone as addPhoneService,
   updatePhone as updatePhoneService,
-  deletePhone as deletePhoneService
+  deletePhone as deletePhoneService,
+  getPhones
 } from "../lib/phoneService";
 import {
   getListPhoneDetails,
@@ -14,10 +15,13 @@ import { useAuthStore } from "./useAuthStore";
 
 interface PhoneState {
   listPhoneDetails: PhoneDetail[];
+  phones: Phone[];
   loading: boolean;
   error: string | null;
   currentSearchTerm: string | undefined;
   fetchListPhoneDetails: (searchTerm?: string) => Promise<void>;
+  fetchPhones: (searchTerm?: string) => Promise<void>;
+  setPhones: (phones: Phone[]) => void;
   addPhone: (
     phoneData: Omit<Phone, "id" | "createdAt" | "updatedAt">
   ) => Promise<void>;
@@ -37,9 +41,55 @@ interface PhoneState {
 
 export const usePhoneStore = create<PhoneState>((set) => ({
   listPhoneDetails: [],
+  phones: [],
   loading: false,
   error: null,
   currentSearchTerm: undefined,
+
+  fetchPhones: async (searchTerm?: string) => {
+    set({ loading: true, error: null });
+    try {
+      const authState = useAuthStore.getState();
+      if (authState.loading) {
+        authState.initialize();
+      }
+
+      let employee = authState.employee;
+      let retries = 0;
+      const maxRetries = 10;
+
+      while (!employee && retries < maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        const currentAuthState = useAuthStore.getState();
+        employee = currentAuthState.employee;
+        retries++;
+      }
+
+      const warehouseId = employee?.warehouseId;
+
+      if (!warehouseId) {
+        set({
+          error: "Không tìm thấy thông tin kho. Vui lòng đăng nhập lại.",
+          loading: false,
+          phones: []
+        });
+        return;
+      }
+
+      const phonesData = await getPhones(searchTerm);
+      set({ phones: phonesData, loading: false });
+    } catch (err) {
+      console.error("Error loading phones:", err);
+      set({
+        error:
+          "Không thể tải danh sách máy. Vui lòng kiểm tra kết nối Firebase.",
+        loading: false,
+        phones: []
+      });
+    }
+  },
+
+  setPhones: (phones) => set({ phones }),
 
   fetchListPhoneDetails: async (searchTerm?: string) => {
     set({ currentSearchTerm: searchTerm });

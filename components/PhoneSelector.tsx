@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { Phone, addPhone } from "../lib/phoneService";
 import { usePhoneStore } from "../stores/usePhoneStore";
-import { useAuthStore } from "../stores/useAuthStore";
 
 interface PhoneSelectorProps {
   isOpen: boolean;
@@ -25,7 +24,6 @@ export default function PhoneSelector({
   const [error, setError] = useState<string | null>(null);
 
   const { phones, loading, fetchPhones } = usePhoneStore();
-  const { employee } = useAuthStore();
 
   // Debounce search query
   useEffect(() => {
@@ -64,13 +62,8 @@ export default function PhoneSelector({
     setIsAdding(true);
 
     try {
-      const warehouseId = employee?.warehouseId;
       const newPhoneData: Omit<Phone, "id" | "createdAt" | "updatedAt"> = {
-        name: newPhoneName.trim(),
-        data: [],
-        totalQuantity: 0,
-        status: "out_of_stock",
-        ...(warehouseId && { warehouseId })
+        name: newPhoneName.trim()
       };
 
       const phoneId = await addPhone(newPhoneData);
@@ -184,7 +177,7 @@ export default function PhoneSelector({
             </div>
           ) : (
             <div className="space-y-2">
-              {phones.map((phone) => (
+              {phones.map((phone: Phone) => (
                 <button
                   key={phone.id}
                   onClick={() => handleSelectPhone(phone)}
@@ -192,9 +185,6 @@ export default function PhoneSelector({
                 >
                   <div className="font-medium text-zinc-900 dark:text-zinc-50">
                     {phone.name}
-                  </div>
-                  <div className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                    Tổng số lượng: {phone.totalQuantity}
                   </div>
                 </button>
               ))}

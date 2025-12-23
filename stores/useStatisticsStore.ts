@@ -4,7 +4,10 @@ import { create } from "zustand";
 import { getPhones, type Phone } from "../lib/phoneService";
 import { getImportRecords, type ImportRecord } from "../lib/importService";
 import { getExportRecords, type ExportRecord } from "../lib/exportService";
-import { getIncomeExpenseRecords, type IncomeExpenseRecord } from "../lib/incomeExpenseService";
+import {
+  getIncomeExpenseRecords,
+  type IncomeExpenseRecord
+} from "../lib/incomeExpenseService";
 import { getWarehouses } from "../lib/warehouseService";
 import { useAuthStore } from "./useAuthStore";
 import { formatDateInput, parseDate } from "../utils/dateUtils";
@@ -26,7 +29,11 @@ interface StatisticsState extends StatisticsTotals {
   startDateInput: string;
   endDateInput: string;
   selectedWarehouseId: string | null;
-  fetchStatistics: (options?: { startDate?: Date | null; endDate?: Date | null; warehouseId?: string | null }) => Promise<void>;
+  fetchStatistics: (options?: {
+    startDate?: Date | null;
+    endDate?: Date | null;
+    warehouseId?: string | null;
+  }) => Promise<void>;
   setStartDateInput: (value: string) => void;
   setEndDateInput: (value: string) => void;
   setSelectedWarehouseId: (warehouseId: string | null) => void;
@@ -35,7 +42,11 @@ interface StatisticsState extends StatisticsTotals {
   resetError: () => void;
 }
 
-const isWithinRange = (date: Date | undefined, start?: Date | null, end?: Date | null) => {
+const isWithinRange = (
+  date: Date | undefined,
+  start?: Date | null,
+  end?: Date | null
+) => {
   if (!start && !end) return true;
   if (!date) return true;
   const time = date.getTime();
@@ -76,7 +87,11 @@ const calculatePhoneTotals = (
   return { totalRemainingQuantity, totalInventoryValue };
 };
 
-const calculateImportValue = (imports: ImportRecord[], start?: Date | null, end?: Date | null) => {
+const calculateImportValue = (
+  imports: ImportRecord[],
+  start?: Date | null,
+  end?: Date | null
+) => {
   const filtered = imports.filter((record) =>
     isWithinRange(record.importDate, start, end)
   );
@@ -88,7 +103,11 @@ const calculateImportValue = (imports: ImportRecord[], start?: Date | null, end?
   }, 0);
 };
 
-const calculateExportValue = (exports: ExportRecord[], start?: Date | null, end?: Date | null) => {
+const calculateExportValue = (
+  exports: ExportRecord[],
+  start?: Date | null,
+  end?: Date | null
+) => {
   const filtered = exports.filter((record) =>
     isWithinRange(record.createdAt, start, end)
   );
@@ -148,7 +167,8 @@ export const useStatisticsStore = create<StatisticsState>((set, get) => ({
   fetchStatistics: async (options) => {
     const startDate = options?.startDate ?? get().startDate;
     const endDate = options?.endDate ?? get().endDate;
-    const selectedWarehouseId = options?.warehouseId ?? get().selectedWarehouseId;
+    const selectedWarehouseId =
+      options?.warehouseId ?? get().selectedWarehouseId;
 
     set({ loading: true, error: null });
     try {
@@ -206,11 +226,8 @@ export const useStatisticsStore = create<StatisticsState>((set, get) => ({
         ? incomeExpenses.filter((record) => record.warehouseId === warehouseId)
         : incomeExpenses;
 
-      const { totalRemainingQuantity, totalInventoryValue } = calculatePhoneTotals(
-        warehousePhones,
-        startDate,
-        endDate
-      );
+      const { totalRemainingQuantity, totalInventoryValue } =
+        calculatePhoneTotals(warehousePhones, startDate, endDate);
       const totalImportValue = calculateImportValue(
         warehouseImports,
         startDate,
@@ -239,7 +256,9 @@ export const useStatisticsStore = create<StatisticsState>((set, get) => ({
           ? {
               startDate,
               endDate,
-              ...(options.warehouseId !== undefined && { selectedWarehouseId: options.warehouseId })
+              ...(options.warehouseId !== undefined && {
+                selectedWarehouseId: options.warehouseId
+              })
             }
           : {})
       });
@@ -258,12 +277,16 @@ export const useStatisticsStore = create<StatisticsState>((set, get) => ({
     const parsedEnd = endDateInput ? parseDate(endDateInput) : null;
 
     if (startDateInput && !parsedStart) {
-      set({ error: "Ngày bắt đầu không hợp lệ. Vui lòng nhập DD / MM / YYYY." });
+      set({
+        error: "Ngày bắt đầu không hợp lệ. Vui lòng nhập DD / MM / YYYY."
+      });
       return;
     }
 
     if (endDateInput && !parsedEnd) {
-      set({ error: "Ngày kết thúc không hợp lệ. Vui lòng nhập DD / MM / YYYY." });
+      set({
+        error: "Ngày kết thúc không hợp lệ. Vui lòng nhập DD / MM / YYYY."
+      });
       return;
     }
 
@@ -273,7 +296,11 @@ export const useStatisticsStore = create<StatisticsState>((set, get) => ({
     }
 
     set({ startDate: parsedStart, endDate: parsedEnd, error: null });
-    await get().fetchStatistics({ startDate: parsedStart, endDate: parsedEnd, warehouseId: selectedWarehouseId });
+    await get().fetchStatistics({
+      startDate: parsedStart,
+      endDate: parsedEnd,
+      warehouseId: selectedWarehouseId
+    });
   },
 
   clearDateFilter: async () => {
@@ -285,7 +312,10 @@ export const useStatisticsStore = create<StatisticsState>((set, get) => ({
       endDateInput: "",
       error: null
     });
-    await get().fetchStatistics({ startDate: null, endDate: null, warehouseId: selectedWarehouseId });
+    await get().fetchStatistics({
+      startDate: null,
+      endDate: null,
+      warehouseId: selectedWarehouseId
+    });
   }
 }));
-

@@ -7,22 +7,15 @@ import {
   updateDoc,
   deleteDoc,
   query,
-  where,
   Timestamp,
   QueryDocumentSnapshot,
-  DocumentData,
-  QueryConstraint
+  DocumentData
 } from "firebase/firestore";
 import { db } from "./firebase";
 
 export interface Phone {
   id: string;
   name: string;
-  data: Array<{ color: string; quantity: number; price: number }>;
-  totalQuantity: number;
-  status: "in_stock" | "low_stock" | "out_of_stock";
-  condition?: string;
-  warehouseId?: string; // id kho
   updatedBy?: {
     employeeId: string;
     employeeName: string;
@@ -30,15 +23,6 @@ export interface Phone {
   createdAt?: Date;
   updatedAt?: Date;
 }
-
-// Helper function to calculate status based on totalQuantity
-const calculateStatus = (
-  totalQuantity: number
-): "in_stock" | "low_stock" | "out_of_stock" => {
-  if (totalQuantity === 0) return "out_of_stock";
-  if (totalQuantity < 10) return "low_stock";
-  return "in_stock";
-};
 
 // Helper function to generate search keywords from phone data
 const generateSearchKeywords = (name: string): string[] => {
@@ -60,39 +44,9 @@ const generateSearchKeywords = (name: string): string[] => {
 // Convert Firestore document to Phone object
 const docToPhone = (doc: QueryDocumentSnapshot<DocumentData>): Phone => {
   const data = doc.data();
-  const phoneData =
-    (data.data as Array<{
-      color?: string;
-      quantity?: number;
-      price?: number;
-    }>) || [];
-
-  // Handle backward compatibility: add price field if missing (use 0 as default)
-  const phoneDataWithPrice = phoneData.map((item) => ({
-    color: item.color || "",
-    quantity: item.quantity || 0,
-    price: item.price !== undefined ? item.price : 0
-  }));
-
-  const totalQuantity =
-    data.totalQuantity !== undefined
-      ? data.totalQuantity
-      : phoneDataWithPrice.reduce(
-          (
-            sum: number,
-            item: { color: string; quantity: number; price: number }
-          ) => sum + (item.quantity || 0),
-          0
-        );
-
   return {
     id: doc.id,
     name: data.name || "",
-    data: phoneDataWithPrice,
-    totalQuantity: totalQuantity,
-    status: data.status || calculateStatus(totalQuantity),
-    condition: data.condition || undefined,
-    warehouseId: data.warehouseId || undefined,
     updatedBy: data.updatedBy || undefined,
     createdAt: data.createdAt?.toDate(),
     updatedAt: data.updatedAt?.toDate()
@@ -114,44 +68,15 @@ export const getPhone = async (id: string): Promise<Phone | null> => {
   }
 };
 
-// Get all phones with optional search and filter
-export const getPhones = async (
-  warehouseId: string,
-  searchTerm?: string,
-  filterStatus?: string
-): Promise<Phone[]> => {
+// Get all phones with optional search
+export const getPhones = async (searchTerm?: string): Promise<Phone[]> => {
   try {
     const phonesRef = collection(db, "phones");
-    const constraints: QueryConstraint[] = [];
     const hasSearch = searchTerm && searchTerm.trim();
-    const hasStatusFilter = filterStatus && filterStatus !== "all";
-    const hasFilter = hasSearch || hasStatusFilter;
 
-    // Add warehouseId filter (required)
-    constraints.push(where("warehouseId", "==", warehouseId));
-
-    // Nếu có search, không dùng Firebase query với searchKeywords
-    // vì documents cũ có thể chưa có field này
-    // Thay vào đó, fetch tất cả rồi filter ở client
-    if (!hasSearch) {
-      // Chỉ dùng orderBy khi không có search và không có status filter để tránh cần composite index
-      if (!hasStatusFilter) {
-        // Nếu có warehouseId filter, cần composite index hoặc sort ở client
-        // Tạm thời sort ở client để tránh cần composite index
-      }
-    }
-
-    // Add status filter if provided
-    if (hasStatusFilter) {
-      constraints.push(where("status", "==", filterStatus));
-    }
-
-    const q = query(phonesRef, ...constraints);
+    const q = query(phonesRef);
     const querySnapshot = await getDocs(q);
     let phones = querySnapshot.docs.map(docToPhone);
-
-    // Filter by warehouseId ở client để đảm bảo hoạt động với documents cũ không có warehouseId
-    phones = phones.filter((phone) => phone.warehouseId === warehouseId);
 
     // Filter search ở client để đảm bảo hoạt động với cả documents cũ và mới
     if (hasSearch) {
@@ -183,19 +108,12 @@ export const getPhones = async (
       });
     }
 
-    // Filter status ở client nếu có search (vì đã fetch tất cả)
-    if (hasSearch && hasStatusFilter) {
-      phones = phones.filter((phone) => phone.status === filterStatus);
-    }
-
-    // Sort ở client nếu có filter để đảm bảo luôn sort theo createdAt
-    if (hasFilter) {
-      phones.sort((a, b) => {
-        const aTime = a.createdAt?.getTime() || 0;
-        const bTime = b.createdAt?.getTime() || 0;
-        return bTime - aTime; // desc
-      });
-    }
+    // Sort theo createdAt
+    phones.sort((a, b) => {
+      const aTime = a.createdAt?.getTime() || 0;
+      const bTime = b.createdAt?.getTime() || 0;
+      return bTime - aTime; // desc
+    });
 
     return phones;
   } catch (error) {
@@ -210,14 +128,12 @@ export const addPhone = async (
 ): Promise<string> => {
   try {
     const phonesRef = collection(db, "phones");
-    const status = calculateStatus(phoneData.totalQuantity);
 
     // Generate search keywords
     const searchKeywords = generateSearchKeywords(phoneData.name);
 
     const newPhone = {
       ...phoneData,
-      status,
       searchKeywords,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now()
@@ -251,11 +167,6 @@ export const updatePhone = async (
         employeeId,
         employeeName
       };
-    }
-
-    // Recalculate status if totalQuantity is being updated
-    if (phoneData.totalQuantity !== undefined) {
-      updateData.status = calculateStatus(phoneData.totalQuantity);
     }
 
     // Update searchKeywords if name is being updated

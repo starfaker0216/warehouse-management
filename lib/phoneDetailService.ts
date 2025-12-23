@@ -244,11 +244,8 @@ const enrichPhoneDetailsWithNames = (
 };
 
 // Helper: Search phones by searchTerm and return matching phoneIds
-const searchPhonesAndGetIds = async (
-  warehouseId: string,
-  searchTerm: string
-): Promise<string[]> => {
-  const phones = await getPhones(warehouseId, searchTerm);
+const searchPhonesAndGetIds = async (searchTerm: string): Promise<string[]> => {
+  const phones = await getPhones(searchTerm);
   return phones.map((phone) => phone.id);
 };
 
@@ -279,7 +276,7 @@ export const getListPhoneDetails = async (
     // Step 1: If searchTerm provided, search phones first and get matching phoneIds
     let matchingPhoneIds: string[] | null = null;
     if (searchTerm && searchTerm.trim()) {
-      matchingPhoneIds = await searchPhonesAndGetIds(warehouseId, searchTerm);
+      matchingPhoneIds = await searchPhonesAndGetIds(searchTerm);
       // If no phones match, return empty array
       if (matchingPhoneIds.length === 0) {
         return [];
