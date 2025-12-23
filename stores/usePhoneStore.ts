@@ -1,18 +1,18 @@
 import { create } from "zustand";
 import {
-  getPhones,
   Phone,
   addPhone as addPhoneService,
   updatePhone as updatePhoneService,
   deletePhone as deletePhoneService
 } from "../lib/phoneService";
+import { getListPhoneDetails, PhoneDetail } from "../lib/phoneDetailService";
 import { useAuthStore } from "./useAuthStore";
 
 interface PhoneState {
-  phones: Phone[];
+  listPhoneDetails: PhoneDetail[];
   loading: boolean;
   error: string | null;
-  fetchPhones: (searchTerm?: string, filterStatus?: string) => Promise<void>;
+  fetchListPhoneDetails: (searchTerm?: string) => Promise<void>;
   addPhone: (
     phoneData: Omit<Phone, "id" | "createdAt" | "updatedAt">
   ) => Promise<void>;
@@ -21,15 +21,15 @@ interface PhoneState {
     phoneData: Partial<Omit<Phone, "id" | "createdAt" | "updatedAt">>
   ) => Promise<void>;
   deletePhone: (id: string) => Promise<void>;
-  setPhones: (phones: Phone[]) => void;
+  setListPhoneDetails: (listPhoneDetails: PhoneDetail[]) => void;
 }
 
 export const usePhoneStore = create<PhoneState>((set) => ({
-  phones: [],
+  listPhoneDetails: [],
   loading: false,
   error: null,
 
-  fetchPhones: async (searchTerm?: string, filterStatus?: string) => {
+  fetchListPhoneDetails: async (searchTerm?: string) => {
     set({ loading: true, error: null });
     try {
       // Ensure auth is initialized first
@@ -57,15 +57,18 @@ export const usePhoneStore = create<PhoneState>((set) => ({
         set({
           error: "Không tìm thấy thông tin kho. Vui lòng đăng nhập lại.",
           loading: false,
-          phones: []
+          listPhoneDetails: []
         });
         return;
       }
 
-      const phonesData = await getPhones(warehouseId, searchTerm, filterStatus);
-      set({ phones: phonesData, loading: false });
+      const listPhoneDetailsData = await getListPhoneDetails(
+        warehouseId,
+        searchTerm
+      );
+      set({ listPhoneDetails: listPhoneDetailsData, loading: false });
     } catch (err) {
-      console.error("Error loading phones:", err);
+      console.error("Error loading list phone details:", err);
       set({
         error: "Không thể tải dữ liệu. Vui lòng kiểm tra kết nối Firebase.",
         loading: false
@@ -80,8 +83,8 @@ export const usePhoneStore = create<PhoneState>((set) => ({
       const employee = useAuthStore.getState().employee;
       const warehouseId = employee?.warehouseId;
       if (warehouseId) {
-        const phonesData = await getPhones(warehouseId);
-        set({ phones: phonesData });
+        const listPhoneDetailsData = await getListPhoneDetails(warehouseId);
+        set({ listPhoneDetails: listPhoneDetailsData });
       }
     } catch (err) {
       console.error("Error adding phone:", err);
@@ -100,8 +103,8 @@ export const usePhoneStore = create<PhoneState>((set) => ({
       await updatePhoneService(id, phoneData, employeeId, employeeName);
       // Fetch lại với cùng search và filter nếu có
       if (warehouseId) {
-        const phonesData = await getPhones(warehouseId);
-        set({ phones: phonesData });
+        const listPhoneDetailsData = await getListPhoneDetails(warehouseId);
+        set({ listPhoneDetails: listPhoneDetailsData });
       }
     } catch (err) {
       console.error("Error updating phone:", err);
@@ -116,8 +119,8 @@ export const usePhoneStore = create<PhoneState>((set) => ({
       const employee = useAuthStore.getState().employee;
       const warehouseId = employee?.warehouseId;
       if (warehouseId) {
-        const phonesData = await getPhones(warehouseId);
-        set({ phones: phonesData });
+        const listPhoneDetailsData = await getListPhoneDetails(warehouseId);
+        set({ listPhoneDetails: listPhoneDetailsData });
       }
     } catch (err) {
       console.error("Error deleting phone:", err);
@@ -125,5 +128,5 @@ export const usePhoneStore = create<PhoneState>((set) => ({
     }
   },
 
-  setPhones: (phones) => set({ phones })
+  setListPhoneDetails: (listPhoneDetails) => set({ listPhoneDetails })
 }));

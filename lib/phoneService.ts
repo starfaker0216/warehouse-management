@@ -99,6 +99,21 @@ const docToPhone = (doc: QueryDocumentSnapshot<DocumentData>): Phone => {
   };
 };
 
+// Get a single phone by id
+export const getPhone = async (id: string): Promise<Phone | null> => {
+  try {
+    const phoneRef = doc(db, "phones", id);
+    const docSnapshot = await getDoc(phoneRef);
+    if (docSnapshot.exists()) {
+      return docToPhone(docSnapshot as QueryDocumentSnapshot<DocumentData>);
+    }
+    return null;
+  } catch (error) {
+    console.error("Error getting phone:", error);
+    throw error;
+  }
+};
+
 // Get all phones with optional search and filter
 export const getPhones = async (
   warehouseId: string,

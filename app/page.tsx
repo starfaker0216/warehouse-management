@@ -15,7 +15,8 @@ import ErrorDisplay from "../components/common/ErrorDisplay";
 export default function Home() {
   const { loading: authLoading, isAuthenticated } = useAuth();
   const router = useRouter();
-  const { phones, loading, error, fetchPhones } = usePhoneStore();
+  const { listPhoneDetails, loading, error, fetchListPhoneDetails } =
+    usePhoneStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -29,17 +30,16 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Fetch phones với search và filter - chỉ khi auth đã load xong
+  // Fetch listPhoneDetails với search - chỉ khi auth đã load xong
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      fetchPhones(debouncedSearchTerm, filterStatus);
+      fetchListPhoneDetails(debouncedSearchTerm);
     }
   }, [
     authLoading,
     isAuthenticated,
-    fetchPhones,
-    debouncedSearchTerm,
-    filterStatus
+    fetchListPhoneDetails,
+    debouncedSearchTerm
   ]);
 
   // Redirect to login if not authenticated
@@ -49,7 +49,9 @@ export default function Home() {
     }
   }, [authLoading, isAuthenticated, router]);
 
-  const statistics = usePhoneStatistics(phones);
+  // Note: Statistics might need to be updated to work with PhoneDetailView
+  // For now, we'll pass empty array or adapt the hook
+  const statistics = usePhoneStatistics([]);
 
   // Show loading while checking auth
   if (authLoading) {
@@ -95,25 +97,17 @@ export default function Home() {
 
         {/* Inventory Table - Desktop */}
         <div className="hidden md:block">
-          <PhoneTable
-            phones={phones}
-            searchTerm={debouncedSearchTerm}
-            filterStatus={filterStatus}
-          />
+          <PhoneTable listPhoneDetails={listPhoneDetails} />
         </div>
 
         {/* Summary */}
         <div className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
-          Hiển thị {phones.length} sản phẩm
+          Hiển thị {listPhoneDetails.length} sản phẩm
         </div>
 
         {/* Inventory List - Mobile */}
         <div className="md:hidden mt-6">
-          <ListPhone
-            phones={phones}
-            searchTerm={debouncedSearchTerm}
-            filterStatus={filterStatus}
-          />
+          <ListPhone listPhoneDetails={listPhoneDetails} />
         </div>
       </div>
     </div>

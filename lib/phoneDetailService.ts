@@ -13,6 +13,7 @@ import {
   DocumentData
 } from "firebase/firestore";
 import { db } from "./firebase";
+import { getPhone, Phone } from "./phoneService";
 
 export interface PhoneDetail {
   id: string;
@@ -29,6 +30,8 @@ export interface PhoneDetail {
   };
   createdAt?: Date;
   updatedAt?: Date;
+  // Optional fields populated when joining with phones collection
+  name?: string; // Phone name from phones collection
 }
 
 // Convert Firestore document to PhoneDetail object
@@ -182,6 +185,128 @@ export const deletePhoneDetail = async (id: string): Promise<void> => {
     await deleteDoc(phoneDetailRef);
   } catch (error) {
     console.error("Error deleting phone detail:", error);
+    throw error;
+  }
+};
+
+// Helper: Extract unique phoneIds from phoneDetails
+const getUniquePhoneIds = (phoneDetails: PhoneDetail[]): string[] => {
+  return Array.from(
+    new Set(phoneDetails.map((detail) => detail.phoneId).filter(Boolean))
+  );
+};
+
+// Helper: Create a map from phoneId to Phone document for quick lookup
+const createPhoneMap = async (
+  phoneIds: string[]
+): Promise<Map<string, Phone | null>> => {
+  const phonePromises = phoneIds.map((phoneId) => getPhone(phoneId));
+  const phoneDocs = await Promise.all(phonePromises);
+
+  const phoneMap = new Map<string, Phone | null>();
+  phoneIds.forEach((phoneId, index) => {
+    phoneMap.set(phoneId, phoneDocs[index]);
+  });
+
+  return phoneMap;
+};
+
+// Helper: Enrich phoneDetails with phone names from phones collection
+const enrichPhoneDetailsWithNames = (
+  phoneDetails: PhoneDetail[],
+  phoneMap: Map<string, Phone | null>
+): PhoneDetail[] => {
+  return phoneDetails
+    .filter((detail) => detail.phoneId) // Only include details with phoneId
+    .map((detail) => {
+      const phoneDoc = phoneMap.get(detail.phoneId) || null;
+      const phoneName = phoneDoc?.name || "";
+
+      return {
+        ...detail,
+        name: phoneName,
+        updatedBy: phoneDoc?.updatedBy || detail.updatedBy
+      };
+    });
+};
+
+// Helper: Parse search term into search words
+const parseSearchWords = (searchTerm: string): string[] => {
+  return searchTerm
+    .toLowerCase()
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word.length > 0);
+};
+
+// Helper: Check if a phoneDetail matches all search words
+const matchesSearchWords = (
+  phoneDetail: PhoneDetail,
+  searchWords: string[]
+): boolean => {
+  const normalizedId = phoneDetail.id.toLowerCase().replace(/[-_]/g, " ");
+  const normalizedName = (phoneDetail.name || "").toLowerCase();
+  const searchableText = `${normalizedId} ${normalizedName}`;
+
+  return searchWords.every((word) => {
+    const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(escapedWord, "i");
+    return regex.test(searchableText);
+  });
+};
+
+// Helper: Filter phoneDetails by search term
+const filterBySearchTerm = (
+  phoneDetails: PhoneDetail[],
+  searchTerm?: string
+): PhoneDetail[] => {
+  if (!searchTerm || !searchTerm.trim()) {
+    return phoneDetails;
+  }
+
+  const searchWords = parseSearchWords(searchTerm);
+  return phoneDetails.filter((detail) =>
+    matchesSearchWords(detail, searchWords)
+  );
+};
+
+// Helper: Sort phoneDetails by createdAt descending
+const sortByCreatedAt = (phoneDetails: PhoneDetail[]): PhoneDetail[] => {
+  return [...phoneDetails].sort((a, b) => {
+    const aTime = a.createdAt?.getTime() || 0;
+    const bTime = b.createdAt?.getTime() || 0;
+    return bTime - aTime; // Descending order
+  });
+};
+
+// Get list of phoneDetails with phone name populated - each phoneDetail is a separate row
+export const getListPhoneDetails = async (
+  warehouseId: string,
+  searchTerm?: string
+): Promise<PhoneDetail[]> => {
+  try {
+    // Step 1: Get all phoneDetails for this warehouse
+    const phoneDetails = await getPhoneDetailsByWarehouseId(warehouseId);
+
+    // Step 2: Get unique phoneIds and fetch phone documents
+    const uniquePhoneIds = getUniquePhoneIds(phoneDetails);
+    const phoneMap = await createPhoneMap(uniquePhoneIds);
+
+    // Step 3: Enrich phoneDetails with phone names
+    let enrichedPhoneDetails = enrichPhoneDetailsWithNames(
+      phoneDetails,
+      phoneMap
+    );
+
+    // Step 4: Filter by search term if provided
+    enrichedPhoneDetails = filterBySearchTerm(enrichedPhoneDetails, searchTerm);
+
+    // Step 5: Sort by createdAt descending
+    enrichedPhoneDetails = sortByCreatedAt(enrichedPhoneDetails);
+
+    return enrichedPhoneDetails;
+  } catch (error) {
+    console.error("Error getting list phone details:", error);
     throw error;
   }
 };
