@@ -1,16 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { PhoneDetail } from "../../lib/phoneDetailService";
-import { recyclePhoneDetail } from "../../lib/phoneRecycleService";
-import {
-  formatCurrencyInput,
-  parseCurrencyInput
-} from "../../utils/currencyUtils";
-import toast from "react-hot-toast";
 import PriceInput from "../common/PriceInput";
 import ColorSelectorField from "../import/ColorSelectorField";
 import { useConfigStore } from "../../stores/useConfigStore";
+import { useEditPhoneDetailStore } from "../../stores/useEditPhoneDetailStore";
 
 interface EditPhoneDetailModalProps {
   isOpen: boolean;
@@ -35,14 +30,24 @@ export default function EditPhoneDetailModal({
   onSave,
   onDeleted
 }: EditPhoneDetailModalProps) {
-  const [color, setColor] = useState("");
-  const [status, setStatus] = useState("");
-  const [imei, setImei] = useState("");
-  const [salePrice, setSalePrice] = useState(0);
-  const [salePriceInputValue, setSalePriceInputValue] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const { colors, fetchColors, addColor } = useConfigStore();
+  const {
+    color,
+    status,
+    imei,
+    salePrice,
+    salePriceInputValue,
+    loading,
+    deleting,
+    setColor,
+    setStatus,
+    setImei,
+    setSalePrice,
+    setSalePriceInputValue,
+    initialize,
+    handleSubmit,
+    handleDelete
+  } = useEditPhoneDetailStore();
 
   // Fetch colors when modal opens
   useEffect(() => {
@@ -53,96 +58,10 @@ export default function EditPhoneDetailModal({
 
   // Initialize form when phoneDetail changes
   useEffect(() => {
-    if (phoneDetail && isOpen) {
-      setColor(phoneDetail.color || "");
-      setStatus(phoneDetail.status || "");
-      setImei(phoneDetail.imei || "");
-      setSalePrice(phoneDetail.salePrice || 0);
-      setSalePriceInputValue(
-        phoneDetail.salePrice ? formatCurrencyInput(phoneDetail.salePrice) : ""
-      );
-    }
-  }, [phoneDetail, isOpen]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!phoneDetail) return;
-
-    // Validation
-    if (!color.trim()) {
-      toast.error("Vui lòng nhập màu sắc");
-      return;
-    }
-
-    // Parse salePrice from inputValue
-    const parsedSalePrice = salePriceInputValue
-      ? parseCurrencyInput(salePriceInputValue)
-      : salePrice;
-
-    if (parsedSalePrice <= 0) {
-      toast.error("Vui lòng nhập giá bán hợp lệ");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const trimmedColor = color.trim();
-
-      // Check if color is new (not in the colors list) and add it to collection
-      if (trimmedColor && !colors.includes(trimmedColor)) {
-        try {
-          await addColor(trimmedColor);
-          // Refresh colors list
-          await fetchColors();
-        } catch (err) {
-          console.error("Error adding color:", err);
-          // Continue even if adding color fails
-        }
-      }
-
-      await onSave(phoneDetail.id, {
-        color: trimmedColor,
-        salePrice: parsedSalePrice,
-        status: status.trim(),
-        imei: imei.trim()
-      });
-
-      toast.success("Cập nhật thông tin máy thành công");
-      onClose();
-    } catch (error) {
-      console.error("Error updating phone detail:", error);
-      toast.error("Có lỗi xảy ra khi cập nhật thông tin máy");
-    } finally {
-      setLoading(false);
-    }
-  };
+    initialize(phoneDetail, isOpen);
+  }, [phoneDetail, isOpen, initialize]);
 
   if (!isOpen || !phoneDetail) return null;
-
-  const handleDelete = async () => {
-    if (!phoneDetail) return;
-
-    const confirmed = window.confirm("Bạn có chắc chắn muốn xóa máy này?");
-    if (!confirmed) return;
-
-    setDeleting(true);
-    try {
-      await recyclePhoneDetail(phoneDetail);
-
-      if (onDeleted) {
-        await onDeleted();
-      }
-
-      toast.success("Đã chuyển máy vào kho thu hồi");
-      onClose();
-    } catch (error) {
-      console.error("Error recycling phone detail:", error);
-      toast.error("Không thể chuyển vào kho thu hồi");
-    } finally {
-      setDeleting(false);
-    }
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -173,7 +92,21 @@ export default function EditPhoneDetailModal({
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!phoneDetail) return;
+            handleSubmit({
+              phoneDetail,
+              onSave,
+              colors,
+              fetchColors,
+              addColor,
+              onClose
+            });
+          }}
+          className="p-6 space-y-6"
+        >
           {/* Phone Name (read-only) */}
           <div>
             <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
@@ -248,7 +181,10 @@ export default function EditPhoneDetailModal({
 
             <button
               type="button"
-              onClick={handleDelete}
+              onClick={() => {
+                if (!phoneDetail) return;
+                handleDelete({ phoneDetail, onDeleted, onClose });
+              }}
               disabled={loading || deleting}
               className="rounded-lg border border-red-500 bg-white px-6 py-2 text-sm font-medium text-red-600 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 dark:border-red-500/70 dark:bg-zinc-800 dark:text-red-300 dark:hover:bg-red-500/10"
             >
