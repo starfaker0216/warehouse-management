@@ -107,9 +107,22 @@ export const getPhoneDetail = async (
     const phoneDetailRef = doc(db, "phoneDetails", id);
     const docSnapshot = await getDoc(phoneDetailRef);
     if (docSnapshot.exists()) {
-      return docToPhoneDetail(
+      const phoneDetail = docToPhoneDetail(
         docSnapshot as QueryDocumentSnapshot<DocumentData>
       );
+
+      // Enrich with phone name from phones collection
+      if (phoneDetail.phoneId) {
+        const phone = await getPhone(phoneDetail.phoneId);
+        if (phone) {
+          return {
+            ...phoneDetail,
+            name: phone.name || ""
+          };
+        }
+      }
+
+      return phoneDetail;
     }
     return null;
   } catch (error) {

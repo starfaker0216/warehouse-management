@@ -18,13 +18,10 @@ export default function ListPhone({ listPhoneDetails }: ListPhoneProps) {
       return;
     }
 
-    // Navigate to export page with phone info
+    // Navigate to export page with phoneDetailId
     const params = new URLSearchParams({
-      phoneId: phoneDetail.phoneId
+      phoneDetailId: phoneDetail.id
     });
-    if (phoneDetail.color) {
-      params.append("color", phoneDetail.color);
-    }
     router.push(`/export?${params.toString()}`);
   };
 

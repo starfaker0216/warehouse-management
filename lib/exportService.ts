@@ -24,6 +24,7 @@ export interface ExportRecord {
   gift: string; // tặng kèm
   note: string; // ghi chú
   phoneId: string; // id máy để reference
+  phoneDetailId: string; // id phoneDetail để reference
   installmentPayment: number; // trả góp
   bankTransfer: number; // chuyển khoản
   cashPayment: number; // tiền mặt
@@ -51,6 +52,7 @@ const docToExportRecord = (
     gift: data.gift || "",
     note: data.note || "",
     phoneId: data.phoneId || "",
+    phoneDetailId: data.phoneDetailId || "",
     installmentPayment: data.installmentPayment || 0,
     bankTransfer: data.bankTransfer || 0,
     cashPayment: data.cashPayment || 0,

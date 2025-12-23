@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { addExportRecord } from "../lib/exportService";
-import { updatePhone as updatePhoneService, Phone } from "../lib/phoneService";
 import {
   getCustomerByPhone,
   addCustomer,
@@ -8,6 +7,7 @@ import {
 } from "../lib/customerService";
 import { usePhoneStore } from "./usePhoneStore";
 import { useAuthStore } from "./useAuthStore";
+import { PhoneDetail, deletePhoneDetail } from "../lib/phoneDetailService";
 import toast from "react-hot-toast";
 
 export interface ExportFormData {
@@ -22,6 +22,7 @@ export interface ExportFormData {
   salePrice: number;
   gift: string;
   note: string;
+  phoneDetailId: string;
   phoneId: string;
   installmentPayment: number;
   bankTransfer: number;
@@ -41,6 +42,7 @@ const initialFormData: ExportFormData = {
   salePrice: 0,
   gift: "",
   note: "",
+  phoneDetailId: "",
   phoneId: "",
   installmentPayment: 0,
   bankTransfer: 0,
@@ -63,8 +65,7 @@ interface ExportFormState {
   setCashPaymentInputValue: (value: string) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  handleColorChange: (color: string, phone: Phone) => void;
-  initializeFromPhone: (phone: Phone, color?: string) => void;
+  initializeFromPhoneDetail: (phoneDetail: PhoneDetail) => void;
   resetForm: () => void;
   handleSubmit: () => Promise<void>;
 }
@@ -90,36 +91,21 @@ export const useExportFormStore = create<ExportFormState>((set, get) => ({
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
 
-  handleColorChange: (color: string, phone: Phone) => {
-    const colorData = phone.data?.find((item) => item.color === color);
-    const price = colorData?.price || 0;
-
-    set((state) => ({
-      formData: {
-        ...state.formData,
-        color,
-        salePrice: price
-      },
-      priceInputValue: price > 0 ? price.toLocaleString("vi-VN") : ""
-    }));
-  },
-
-  initializeFromPhone: (phone: Phone, color?: string) => {
-    const selectedColor =
-      color || (phone.data && phone.data.length > 0 ? phone.data[0].color : "");
-    const colorData = phone.data?.find((item) => item.color === selectedColor);
-    const defaultPrice = colorData?.price || 0;
-
+  initializeFromPhoneDetail: (phoneDetail: PhoneDetail) => {
     set({
       formData: {
         ...initialFormData,
-        phoneId: phone.id,
-        phoneName: phone.name.trim(),
-        color: selectedColor,
-        salePrice: defaultPrice
+        phoneDetailId: phoneDetail.id,
+        phoneId: phoneDetail.phoneId,
+        phoneName: phoneDetail.name || "",
+        color: phoneDetail.color || "",
+        imei: phoneDetail.imei || "",
+        salePrice: phoneDetail.salePrice || 0
       },
       priceInputValue:
-        defaultPrice > 0 ? defaultPrice.toLocaleString("vi-VN") : ""
+        phoneDetail.salePrice && phoneDetail.salePrice > 0
+          ? phoneDetail.salePrice.toLocaleString("vi-VN")
+          : ""
     });
   },
 
@@ -202,6 +188,7 @@ export const useExportFormStore = create<ExportFormState>((set, get) => ({
         gift: formData.gift.trim(),
         note: formData.note.trim(),
         phoneId: formData.phoneId,
+        phoneDetailId: formData.phoneDetailId,
         installmentPayment: formData.installmentPayment || 0,
         bankTransfer: formData.bankTransfer || 0,
         cashPayment: formData.cashPayment || 0,
@@ -211,43 +198,13 @@ export const useExportFormStore = create<ExportFormState>((set, get) => ({
         ...(warehouseId && { warehouseId })
       });
 
-      // Update phone quantity (decrease by 1)
-      if (formData.phoneId) {
+      // Delete phone detail after export
+      if (formData.phoneDetailId) {
+        await deletePhoneDetail(formData.phoneDetailId);
+
+        // Refresh phone details list
         const phoneStore = usePhoneStore.getState();
-        const phones = phoneStore.phones;
-        const phone = phones.find((p) => p.id === formData.phoneId);
-
-        if (phone) {
-          // Find the color data and decrease quantity
-          const updatedData = phone.data.map((item) => {
-            if (item.color === formData.color) {
-              return {
-                ...item,
-                quantity: Math.max(0, (item.quantity || 0) - 1)
-              };
-            }
-            return item;
-          });
-
-          // Recalculate total quantity
-          const totalQuantity = updatedData.reduce(
-            (sum, item) => sum + (item.quantity || 0),
-            0
-          );
-
-          await updatePhoneService(
-            formData.phoneId,
-            {
-              data: updatedData,
-              totalQuantity
-            },
-            employeeId,
-            employeeName
-          );
-
-          // Refresh phones list
-          await phoneStore.fetchPhones();
-        }
+        await phoneStore.fetchListPhoneDetails();
       }
 
       toast.success("Tạo phiếu xuất hàng thành công!");
