@@ -8,3 +8,4 @@ alwaysApply: true
 4. Luôn sử dụng yarn để quản lý các package
 5. Các public Interface (có thể export và dùng ở các file khác nhau), nên được tạo thành file riêng hoặc nhóm chung các mục đích trong folder types (ví dụ types/importTypes.ts)
 6. Hạn chế implement logic trong file tsx, file tsx chỉ đóng vai trò implement UI, logic cần implement trong store hoặc các services.
+7. Các function không nên quá dài, nên tách thành nhiều function nhỏ cho dễ đọc hiểu, maintain, lý tưởng là tối đa 20 dòng / 1 function, trừ 1 vài trường hợp đặc biệt

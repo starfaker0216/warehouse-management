@@ -1,7 +1,11 @@
 "use client";
 
 import { create } from "zustand";
-import { getPhones, type Phone } from "../lib/phoneService";
+import {
+  getPhoneDetailsByWarehouseId,
+  getPhoneDetail,
+  type PhoneDetail
+} from "../lib/phoneDetailService";
 import { getImportRecords, type ImportRecord } from "../lib/importService";
 import { getExportRecords, type ExportRecord } from "../lib/exportService";
 import {
@@ -60,46 +64,49 @@ const isWithinRange = (
 };
 
 const calculatePhoneTotals = (
-  phones: Phone[],
+  phoneDetails: PhoneDetail[],
   start?: Date | null,
   end?: Date | null
 ): Pick<StatisticsTotals, "totalRemainingQuantity" | "totalInventoryValue"> => {
-  const filteredPhones = phones.filter((phone) => {
+  const filteredPhoneDetails = phoneDetails.filter((phoneDetail) => {
     if (!start && !end) return true;
-    const refDate = phone.updatedAt || phone.createdAt;
+    const refDate = phoneDetail.updatedAt || phoneDetail.createdAt;
     return isWithinRange(refDate, start, end);
   });
 
-  const totalRemainingQuantity = filteredPhones.reduce(
-    (sum, phone) => sum + (phone.totalQuantity || 0),
+  // Mỗi PhoneDetail đại diện cho 1 điện thoại
+  const totalRemainingQuantity = filteredPhoneDetails.length;
+
+  // Tính tổng giá trị từ importPrice của mỗi PhoneDetail
+  const totalInventoryValue = filteredPhoneDetails.reduce(
+    (sum, phoneDetail) => sum + (phoneDetail.importPrice || 0),
     0
   );
-
-  const totalInventoryValue = filteredPhones.reduce((sum, phone) => {
-    const phoneValue = phone.data.reduce((acc, item) => {
-      const quantity = item.quantity || 0;
-      const price = item.price || 0;
-      return acc + quantity * price;
-    }, 0);
-    return sum + phoneValue;
-  }, 0);
 
   return { totalRemainingQuantity, totalInventoryValue };
 };
 
-const calculateImportValue = (
+const calculateImportValue = async (
   imports: ImportRecord[],
   start?: Date | null,
   end?: Date | null
-) => {
+): Promise<number> => {
   const filtered = imports.filter((record) =>
     isWithinRange(record.importDate, start, end)
   );
 
-  return filtered.reduce((sum, record) => {
-    const quantity = record.quantity || 0;
-    const price = record.importPrice || 0;
-    return sum + quantity * price;
+  // Lấy tất cả phoneDetailIds từ các ImportRecord đã filter
+  const phoneDetailIds = filtered.flatMap(
+    (record) => record.phoneDetailIds || []
+  );
+
+  // Fetch các PhoneDetail tương ứng và tính tổng importPrice
+  const phoneDetailPromises = phoneDetailIds.map((id) => getPhoneDetail(id));
+  const phoneDetails = await Promise.all(phoneDetailPromises);
+
+  return phoneDetails.reduce((sum, phoneDetail) => {
+    if (!phoneDetail) return sum;
+    return sum + (phoneDetail.importPrice || 0);
   }, 0);
 };
 
@@ -133,6 +140,125 @@ const calculateIncomeExpense = (
     .reduce((sum, record) => sum + (record.amount || 0), 0);
 
   return { totalIncome, totalExpense };
+};
+
+// Helper: Validate employee and warehouse access
+const validateEmployeeAndWarehouse = (
+  employee: { role?: string; warehouseId?: string } | null,
+  warehouseId: string | null
+): { isValid: boolean; error?: string } => {
+  if (!employee?.role) {
+    return {
+      isValid: false,
+      error: "Không tìm thấy thông tin kho. Vui lòng đăng nhập lại."
+    };
+  }
+
+  if (employee.role !== "admin" && !warehouseId) {
+    return {
+      isValid: false,
+      error: "Không tìm thấy thông tin kho. Vui lòng đăng nhập lại."
+    };
+  }
+
+  return { isValid: true };
+};
+
+// Helper: Determine warehouseId to use
+const determineWarehouseId = (
+  selectedWarehouseId: string | null,
+  employeeWarehouseId: string | undefined
+): string | null => {
+  return selectedWarehouseId || employeeWarehouseId || null;
+};
+
+// Helper: Fetch phone details for a specific warehouse or all warehouses
+const fetchPhoneDetailsForWarehouse = async (
+  warehouseId: string | null,
+  employeeRole: string | undefined
+): Promise<PhoneDetail[]> => {
+  if (warehouseId) {
+    return await getPhoneDetailsByWarehouseId(warehouseId);
+  }
+
+  if (employeeRole === "admin") {
+    // Admin viewing all - fetch from all warehouses
+    const warehouses = await getWarehouses();
+    const allPhoneDetailsPromises = warehouses.map((w) =>
+      getPhoneDetailsByWarehouseId(w.id)
+    );
+    const allPhoneDetailsArrays = await Promise.all(allPhoneDetailsPromises);
+    return allPhoneDetailsArrays.flat();
+  }
+
+  return [];
+};
+
+// Helper: Filter data by warehouse
+const filterDataByWarehouse = <T extends { warehouseId?: string }>(
+  data: T[],
+  warehouseId: string | null
+): T[] => {
+  if (!warehouseId) return data;
+  return data.filter((item) => item.warehouseId === warehouseId);
+};
+
+// Helper: Calculate all statistics values
+const calculateAllStatistics = async (
+  phoneDetails: PhoneDetail[],
+  imports: ImportRecord[],
+  exports: ExportRecord[],
+  incomeExpenses: IncomeExpenseRecord[],
+  startDate: Date | null,
+  endDate: Date | null
+): Promise<StatisticsTotals> => {
+  const { totalRemainingQuantity, totalInventoryValue } = calculatePhoneTotals(
+    phoneDetails,
+    startDate,
+    endDate
+  );
+
+  const [totalImportValue, totalExportValue, { totalIncome, totalExpense }] =
+    await Promise.all([
+      calculateImportValue(imports, startDate, endDate),
+      Promise.resolve(calculateExportValue(exports, startDate, endDate)),
+      Promise.resolve(
+        calculateIncomeExpense(incomeExpenses, startDate, endDate)
+      )
+    ]);
+
+  return {
+    totalRemainingQuantity,
+    totalInventoryValue,
+    totalImportValue,
+    totalExportValue,
+    totalIncome,
+    totalExpense
+  };
+};
+
+// Helper: Build state update object
+const buildStateUpdate = (
+  statistics: StatisticsTotals,
+  startDate: Date | null,
+  endDate: Date | null,
+  options?: {
+    warehouseId?: string | null;
+  }
+) => {
+  return {
+    ...statistics,
+    loading: false,
+    ...(options
+      ? {
+          startDate,
+          endDate,
+          ...(options.warehouseId !== undefined && {
+            selectedWarehouseId: options.warehouseId
+          })
+        }
+      : {})
+  };
 };
 
 export const useStatisticsStore = create<StatisticsState>((set, get) => ({
@@ -171,97 +297,58 @@ export const useStatisticsStore = create<StatisticsState>((set, get) => ({
       options?.warehouseId ?? get().selectedWarehouseId;
 
     set({ loading: true, error: null });
+
     try {
       const employee = useAuthStore.getState().employee;
-      // Use selected warehouse or fallback to employee's warehouse
-      const warehouseId = selectedWarehouseId || employee?.warehouseId || null;
+      const warehouseId = determineWarehouseId(
+        selectedWarehouseId,
+        employee?.warehouseId
+      );
 
-      // For admin, if no warehouse selected, fetch all data
-      // For non-admin, require warehouseId
-      if (!employee?.role || (employee.role !== "admin" && !warehouseId)) {
-        set({
-          loading: false,
-          error: "Không tìm thấy thông tin kho. Vui lòng đăng nhập lại."
-        });
+      // Validate access
+      const validation = validateEmployeeAndWarehouse(employee, warehouseId);
+      if (!validation.isValid) {
+        set({ loading: false, error: validation.error || undefined });
         return;
       }
 
-      // If warehouseId is provided, fetch phones for that warehouse
-      // Otherwise (admin viewing all), we need to fetch all phones
-      // Note: getPhones requires warehouseId, so we'll fetch all and filter
-      const [imports, exports, incomeExpenses] = await Promise.all([
-        getImportRecords(),
-        getExportRecords(),
-        getIncomeExpenseRecords()
-      ]);
+      // Fetch all required data in parallel
+      const [imports, exports, incomeExpenses, phoneDetails] =
+        await Promise.all([
+          getImportRecords(),
+          getExportRecords(),
+          getIncomeExpenseRecords(),
+          fetchPhoneDetailsForWarehouse(warehouseId, employee?.role)
+        ]);
 
-      // Fetch phones - if warehouseId is null (all), fetch from all warehouses
-      let phones: Phone[] = [];
-      if (warehouseId) {
-        phones = await getPhones(warehouseId);
-      } else if (employee.role === "admin") {
-        // Admin viewing all - fetch from all warehouses
-        const warehouses = await getWarehouses();
-        const allPhonesPromises = warehouses.map((w) => getPhones(w.id));
-        const allPhonesArrays = await Promise.all(allPhonesPromises);
-        phones = allPhonesArrays.flat();
-      } else {
-        // Non-admin fallback to their warehouse
-        const defaultWarehouseId = employee.warehouseId;
-        if (defaultWarehouseId) {
-          phones = await getPhones(defaultWarehouseId);
-        }
-      }
+      // Filter data by warehouse
+      const warehousePhoneDetails = filterDataByWarehouse(
+        phoneDetails,
+        warehouseId
+      );
+      const warehouseImports = filterDataByWarehouse(imports, warehouseId);
+      const warehouseExports = filterDataByWarehouse(exports, warehouseId);
+      const warehouseIncomeExpenses = filterDataByWarehouse(
+        incomeExpenses,
+        warehouseId
+      );
 
-      const warehousePhones = warehouseId
-        ? phones.filter((phone) => phone.warehouseId === warehouseId)
-        : phones;
-      const warehouseImports = warehouseId
-        ? imports.filter((record) => record.warehouseId === warehouseId)
-        : imports;
-      const warehouseExports = warehouseId
-        ? exports.filter((record) => record.warehouseId === warehouseId)
-        : exports;
-      const warehouseIncomeExpenses = warehouseId
-        ? incomeExpenses.filter((record) => record.warehouseId === warehouseId)
-        : incomeExpenses;
-
-      const { totalRemainingQuantity, totalInventoryValue } =
-        calculatePhoneTotals(warehousePhones, startDate, endDate);
-      const totalImportValue = calculateImportValue(
+      // Calculate all statistics
+      const statistics = await calculateAllStatistics(
+        warehousePhoneDetails,
         warehouseImports,
-        startDate,
-        endDate
-      );
-      const totalExportValue = calculateExportValue(
         warehouseExports,
-        startDate,
-        endDate
-      );
-      const { totalIncome, totalExpense } = calculateIncomeExpense(
         warehouseIncomeExpenses,
         startDate,
         endDate
       );
 
-      set({
-        totalRemainingQuantity,
-        totalInventoryValue,
-        totalImportValue,
-        totalExportValue,
-        totalIncome,
-        totalExpense,
-        loading: false,
-        ...(options
-          ? {
-              startDate,
-              endDate,
-              ...(options.warehouseId !== undefined && {
-                selectedWarehouseId: options.warehouseId
-              })
-            }
-          : {})
-      });
+      // Update state
+      set(
+        buildStateUpdate(statistics, startDate, endDate, {
+          warehouseId: options?.warehouseId
+        })
+      );
     } catch (error) {
       console.error("Error fetching statistics:", error);
       set({

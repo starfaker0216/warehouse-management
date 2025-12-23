@@ -7,8 +7,7 @@ interface StatisticsCardsProps {
 }
 
 export default function StatisticsCards({ statistics }: StatisticsCardsProps) {
-  const { totalPhones, totalValue, lowStockCount, outOfStockCount } =
-    statistics;
+  const { totalPhones, totalValue } = statistics;
 
   return (
     <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -53,50 +52,6 @@ export default function StatisticsCards({ statistics }: StatisticsCardsProps) {
         }
         iconBgColor="bg-green-100 dark:bg-green-900/30"
         valueSize="text-xl"
-      />
-
-      <StatisticsCard
-        title="Sắp hết hàng"
-        value={lowStockCount}
-        icon={
-          <svg
-            className="h-6 w-6 text-yellow-600 dark:text-yellow-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-            />
-          </svg>
-        }
-        iconBgColor="bg-yellow-100 dark:bg-yellow-900/30"
-        valueColor="text-yellow-600 dark:text-yellow-400"
-      />
-
-      <StatisticsCard
-        title="Hết hàng"
-        value={outOfStockCount}
-        icon={
-          <svg
-            className="h-6 w-6 text-red-600 dark:text-red-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        }
-        iconBgColor="bg-red-100 dark:bg-red-900/30"
-        valueColor="text-red-600 dark:text-red-400"
       />
     </div>
   );
