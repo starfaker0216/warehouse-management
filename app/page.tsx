@@ -4,8 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../contexts/AuthContext";
 import { usePhoneStore } from "../stores/usePhoneStore";
-import { usePhoneStatistics } from "../hooks/usePhoneStatistics";
-import StatisticsCards from "../components/home/StatisticsCards";
 import PhoneFilters from "../components/home/PhoneFilters";
 import PhoneTable from "../components/home/PhoneTable";
 import ListPhone from "../components/home/ListPhone";
@@ -53,10 +51,6 @@ export default function Home() {
     }
   }, [authLoading, isAuthenticated, router]);
 
-  // Note: Statistics might need to be updated to work with PhoneDetailView
-  // For now, we'll pass empty array or adapt the hook
-  const statistics = usePhoneStatistics([]);
-
   // Show loading while checking auth
   if (authLoading) {
     return <Loading />;
@@ -79,9 +73,6 @@ export default function Home() {
             Quản lý và theo dõi tồn kho sản phẩm điện thoại
           </p>
         </div>
-
-        {/* Statistics Cards */}
-        <StatisticsCards statistics={statistics} />
 
         {/* Filters and Search - Always render to maintain focus */}
         <PhoneFilters

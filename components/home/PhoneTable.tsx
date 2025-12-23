@@ -90,10 +90,10 @@ export default function PhoneTable({
                 Màu sắc
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                Giá
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                 Tình trạng máy
+              </th>
+              <th className="px-6 py-3 text-left text-xs text-right font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                Giá
               </th>
               {isAdmin && (
                 <th className="w-fit py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400"></th>
@@ -118,13 +118,6 @@ export default function PhoneTable({
                   </span>
                 </td>
                 <td className="px-6 py-4 text-sm text-zinc-900 dark:text-zinc-50">
-                  <span className="text-zinc-600 dark:text-zinc-400">
-                    {!phoneDetail.salePrice || phoneDetail.salePrice === 0
-                      ? "Liên hệ Admin"
-                      : formatCurrency(phoneDetail.salePrice)}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-sm text-zinc-900 dark:text-zinc-50">
                   {phoneDetail.status ? (
                     <div className="whitespace-pre-wrap break-words">
                       {phoneDetail.status}
@@ -134,6 +127,13 @@ export default function PhoneTable({
                       Chưa có thông tin
                     </span>
                   )}
+                </td>
+                <td className="px-6 py-4 text-sm text-right text-zinc-900 dark:text-zinc-50">
+                  <span className="text-zinc-600 dark:text-zinc-400">
+                    {!phoneDetail.salePrice || phoneDetail.salePrice === 0
+                      ? "Liên hệ Admin"
+                      : formatCurrency(phoneDetail.salePrice)}
+                  </span>
                 </td>
                 {isAdmin && (
                   <td className="whitespace-nowrap py-4 text-sm">
