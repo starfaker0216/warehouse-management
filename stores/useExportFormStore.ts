@@ -7,7 +7,12 @@ import {
 } from "../lib/customerService";
 import { usePhoneStore } from "./usePhoneStore";
 import { useAuthStore } from "./useAuthStore";
-import { PhoneDetail, deletePhoneDetail } from "../lib/phoneDetailService";
+import {
+  PhoneDetail,
+  getPhoneDetail,
+  deletePhoneDetail
+} from "../lib/phoneDetailService";
+import { addPhoneExported } from "../lib/phoneExportedService";
 import toast from "react-hot-toast";
 
 export interface ExportFormData {
@@ -178,7 +183,7 @@ export const useExportFormStore = create<ExportFormState>((set, get) => ({
       const warehouseId = employee?.warehouseId || undefined;
 
       // Add export record
-      await addExportRecord({
+      const exportRecordId = await addExportRecord({
         customerPhone: formData.customerPhone.trim(),
         customerName: formData.customerName.trim(),
         phoneName: formData.phoneName,
@@ -198,13 +203,26 @@ export const useExportFormStore = create<ExportFormState>((set, get) => ({
         ...(warehouseId && { warehouseId })
       });
 
-      // Delete phone detail after export
+      // Save phone detail to phoneExporteds before deletion
       if (formData.phoneDetailId) {
-        await deletePhoneDetail(formData.phoneDetailId);
+        // Fetch full phone detail data
+        const phoneDetail = await getPhoneDetail(formData.phoneDetailId);
+        if (phoneDetail) {
+          // Save to phoneExporteds collection
+          await addPhoneExported(
+            phoneDetail,
+            exportRecordId,
+            formData.customerPhone.trim(),
+            formData.customerName.trim()
+          );
 
-        // Refresh phone details list
-        const phoneStore = usePhoneStore.getState();
-        await phoneStore.fetchListPhoneDetails();
+          // Delete phone detail after saving to phoneExporteds
+          await deletePhoneDetail(formData.phoneDetailId);
+
+          // Refresh phone details list
+          const phoneStore = usePhoneStore.getState();
+          await phoneStore.fetchListPhoneDetails();
+        }
       }
 
       toast.success("Tạo phiếu xuất hàng thành công!");
