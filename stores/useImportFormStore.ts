@@ -6,7 +6,7 @@ import {
   validateItems,
   processSupplierAndColors,
   getEmployeeInfo,
-  updatePhoneInventory
+  createPhoneDetails
 } from "./helper/importFunction";
 import toast from "react-hot-toast";
 
@@ -165,26 +165,32 @@ export const useImportFormStore = create<ImportFormState>((set, get) => ({
       // Get employee info
       const { employeeId, employeeName, warehouseId } = getEmployeeInfo();
 
-      // Save import record
+      if (!warehouseId) {
+        toast.error("Không tìm thấy thông tin kho!");
+        set({ loading: false });
+        return;
+      }
+
+      // Create phone details
+      const phoneDetailIds = await createPhoneDetails(
+        state.formData.phoneId,
+        warehouseId,
+        state.formData.items
+      );
+
+      // Save import record with phoneDetailIds
       await addImportRecord({
         phoneId: state.formData.phoneId,
         importDate: state.formData.importDate,
         phoneType: state.formData.phoneType,
         quantity: state.formData.quantity,
-        items: state.formData.items,
+        phoneDetailIds,
         supplier: supplierName,
         note: state.formData.note,
         employeeId,
         employeeName,
-        ...(warehouseId && { warehouseId })
+        warehouseId
       });
-
-      // Update phone inventory
-      await updatePhoneInventory(
-        state.formData.phoneId,
-        state.formData.items,
-        state.formData.quantity
-      );
 
       // Reset form and show success
       get().resetForm();

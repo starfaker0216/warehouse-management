@@ -16,7 +16,7 @@ export default function PhoneSelectorField({
   const displayValue = phoneId
     ? (() => {
         const selectedPhone = phones.find((p) => p.id === phoneId);
-        return selectedPhone ? selectedPhone.model : phoneId;
+        return selectedPhone ? selectedPhone.name : phoneId;
       })()
     : "";
 
@@ -99,4 +99,3 @@ export default function PhoneSelectorField({
     </>
   );
 }
-

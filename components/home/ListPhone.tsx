@@ -42,7 +42,6 @@ export default function ListPhone({
     id: string,
     phoneData: {
       name: string;
-      model: string;
       data: Array<{ color: string; quantity: number; price: number }>;
       condition?: string;
     }
@@ -105,9 +104,6 @@ export default function ListPhone({
                 <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
                   {phone.name}
                 </h3>
-                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                  {phone.model}
-                </p>
               </div>
               <div className="ml-3 flex flex-col items-end gap-2">
                 <StatusBadge status={phone.status} />

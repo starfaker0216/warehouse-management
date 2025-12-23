@@ -20,12 +20,8 @@ export default function ImportPage() {
     colors,
     suppliers,
     warehouseName,
-    newColor,
-    setNewColor,
     newSupplier,
     setNewSupplier,
-    showAddColor,
-    setShowAddColor,
     showAddSupplier,
     setShowAddSupplier,
     loading,
@@ -197,8 +193,6 @@ export default function ImportPage() {
                         <ColorSelectorField
                           colors={colors}
                           selectedColor={item.color}
-                          newColor={newColor}
-                          showAddColor={showAddColor}
                           onColorChange={(color) => {
                             const updatedItems = [...formData.items];
                             updatedItems[index] = {
@@ -207,8 +201,6 @@ export default function ImportPage() {
                             };
                             setFormData({ ...formData, items: updatedItems });
                           }}
-                          onNewColorChange={setNewColor}
-                          onShowAddColor={setShowAddColor}
                         />
 
                         {/* IMEI */}

@@ -17,7 +17,6 @@ interface EditPhoneModalProps {
     id: string,
     phoneData: {
       name: string;
-      model: string;
       data: Array<{ color: string; quantity: number; price: number }>;
       condition?: string;
     }
@@ -31,7 +30,6 @@ export default function EditPhoneModal({
   onSave
 }: EditPhoneModalProps) {
   const [name, setName] = useState("");
-  const [model, setModel] = useState("");
   const [condition, setCondition] = useState("");
   const [data, setData] = useState<
     Array<{
@@ -47,7 +45,6 @@ export default function EditPhoneModal({
   useEffect(() => {
     if (phone && isOpen) {
       setName(phone.name || "");
-      setModel(phone.model || "");
       setCondition(phone.condition || "");
       setData(
         phone.data
@@ -116,11 +113,6 @@ export default function EditPhoneModal({
       return;
     }
 
-    if (!model.trim()) {
-      toast.error("Vui lòng nhập model");
-      return;
-    }
-
     // First, parse prices from inputValue to ensure we have the latest values
     const dataWithParsedPrices = data.map((item) => {
       const parsedPrice = item.priceInputValue
@@ -174,7 +166,6 @@ export default function EditPhoneModal({
 
       await onSave(phone.id, {
         name: name.trim(),
-        model: model.trim(),
         data: finalData,
         condition: condition.trim() || undefined
       });
@@ -233,21 +224,6 @@ export default function EditPhoneModal({
               onChange={(e) => setName(e.target.value)}
               className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
               placeholder="Nhập tên sản phẩm"
-            />
-          </div>
-
-          {/* Model */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Model <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
-              placeholder="Nhập model"
             />
           </div>
 

@@ -1,22 +1,21 @@
+"use client";
+
+import { useState } from "react";
+
 interface ColorSelectorFieldProps {
   colors: string[];
   selectedColor: string;
-  newColor: string;
-  showAddColor: boolean;
   onColorChange: (color: string) => void;
-  onNewColorChange: (color: string) => void;
-  onShowAddColor: (show: boolean) => void;
 }
 
 export default function ColorSelectorField({
   colors,
   selectedColor,
-  newColor,
-  showAddColor,
-  onColorChange,
-  onNewColorChange,
-  onShowAddColor
+  onColorChange
 }: ColorSelectorFieldProps) {
+  const [newColor, setNewColor] = useState("");
+  const [showAddColor, setShowAddColor] = useState(false);
+
   return (
     <div>
       <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
@@ -40,7 +39,7 @@ export default function ColorSelectorField({
             </select>
             <button
               type="button"
-              onClick={() => onShowAddColor(true)}
+              onClick={() => setShowAddColor(true)}
               className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
             >
               + Mới
@@ -54,7 +53,7 @@ export default function ColorSelectorField({
               value={newColor}
               onChange={(e) => {
                 const value = e.target.value;
-                onNewColorChange(value);
+                setNewColor(value);
                 onColorChange(value);
               }}
               placeholder="Nhập màu mới"
@@ -63,8 +62,8 @@ export default function ColorSelectorField({
             <button
               type="button"
               onClick={() => {
-                onShowAddColor(false);
-                onNewColorChange("");
+                setShowAddColor(false);
+                setNewColor("");
                 onColorChange("");
               }}
               className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
@@ -77,4 +76,3 @@ export default function ColorSelectorField({
     </div>
   );
 }
-

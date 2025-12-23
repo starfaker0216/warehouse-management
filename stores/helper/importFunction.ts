@@ -1,7 +1,12 @@
-import { updatePhone as updatePhoneService } from "../../lib/phoneService";
-import { usePhoneStore } from "../usePhoneStore";
 import { useConfigStore } from "../useConfigStore";
 import { useAuthStore } from "../useAuthStore";
+import { addPhoneDetails } from "../../lib/phoneDetailService";
+import {
+  colorExists,
+  addColor,
+  supplierExists,
+  addSupplier
+} from "../../lib/configService";
 import toast from "react-hot-toast";
 import { ImportFormData, ImportItem } from "../../types/importTypes";
 
@@ -74,12 +79,36 @@ export const processSupplierAndColors = async (
       ? newSupplier.trim()
       : supplier?.trim() || "";
 
-  const allColors = items.map((item) => item.color.trim());
+  // Process each color individually
+  const allColors = items
+    .map((item) => item.color.trim())
+    .filter((color) => color);
   const uniqueColors = [...new Set(allColors)];
 
-  await useConfigStore
-    .getState()
-    .processColorAndSupplier(uniqueColors.join(","), supplierName);
+  // Check and add each color if it doesn't exist
+  const colorPromises = uniqueColors.map(async (color) => {
+    const exists = await colorExists(color);
+    if (!exists) {
+      await addColor(color);
+    }
+  });
+
+  await Promise.all(colorPromises);
+
+  // Refresh colors in store after adding new ones
+  if (colorPromises.length > 0) {
+    await useConfigStore.getState().fetchColors();
+  }
+
+  // Process supplier
+  if (supplierName) {
+    const supplierExistsResult = await supplierExists(supplierName);
+    if (!supplierExistsResult) {
+      await addSupplier(supplierName);
+      // Refresh suppliers in store after adding new one
+      await useConfigStore.getState().fetchSuppliers();
+    }
+  }
 
   return supplierName;
 };
@@ -93,65 +122,34 @@ export const getEmployeeInfo = () => {
   };
 };
 
-// Inventory update helper
-export const updatePhoneInventory = async (
+// Create phone details helper
+export const createPhoneDetails = async (
   phoneId: string,
-  items: ImportItem[],
-  quantity: number
-): Promise<void> => {
-  const phones = usePhoneStore.getState().phones;
-  if (!phoneId || items.length === 0) {
-    return;
-  }
-
-  const selectedPhone = phones.find((p) => p.id === phoneId);
-  if (!selectedPhone) {
-    return;
+  warehouseId: string,
+  items: ImportItem[]
+): Promise<string[]> => {
+  if (!phoneId || !warehouseId || items.length === 0) {
+    return [];
   }
 
   const employee = useAuthStore.getState().employee;
-  const employeeId = employee?.id || "";
-  const employeeName = employee?.name || "";
+  if (!employee) {
+    throw new Error("Employee not found");
+  }
 
-  const updatedData = [...selectedPhone.data];
-  const colorMap = new Map<string, number>();
-
-  // Count quantity by color
-  items.forEach((item) => {
-    const color = item.color.trim();
-    colorMap.set(color, (colorMap.get(color) || 0) + 1);
-  });
-
-  // Update inventory by color
-  colorMap.forEach((count, color) => {
-    const colorIndex = updatedData.findIndex((item) => item.color === color);
-
-    if (colorIndex >= 0) {
-      updatedData[colorIndex] = {
-        ...updatedData[colorIndex],
-        quantity: updatedData[colorIndex].quantity + count
-      };
-    } else {
-      updatedData.push({
-        color,
-        quantity: count,
-        price: 0
-      });
-    }
-  });
-
-  const newTotalQuantity = selectedPhone.totalQuantity + quantity;
-
-  await updatePhoneService(
+  const phoneDetailsData = items.map((item) => ({
     phoneId,
-    {
-      data: updatedData,
-      totalQuantity: newTotalQuantity
-    },
-    employeeId,
-    employeeName
-  );
+    warehouseId,
+    color: item.color.trim(),
+    imei: item.imei.trim(),
+    importPrice: item.importPrice,
+    salePrice: item.salePrice,
+    status: item.status.trim(),
+    updatedBy: {
+      employeeId: employee.id || "",
+      employeeName: employee.name || ""
+    }
+  }));
 
-  // Refresh phones
-  await usePhoneStore.getState().fetchPhones();
+  return await addPhoneDetails(phoneDetailsData);
 };

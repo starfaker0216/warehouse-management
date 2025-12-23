@@ -24,8 +24,7 @@ export function usePhoneFilters(
       // Tạo một chuỗi kết hợp từ tất cả các trường có thể tìm kiếm
       const searchableText = [
         phone.id.toLowerCase(),
-        phone.name.toLowerCase(),
-        phone.model.toLowerCase()
+        phone.name.toLowerCase()
       ].join(" ");
 
       // Kiểm tra xem tất cả các từ trong searchTerm có xuất hiện trong searchableText không

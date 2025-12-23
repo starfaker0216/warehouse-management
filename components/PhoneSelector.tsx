@@ -20,7 +20,6 @@ export default function PhoneSelector({
 }: PhoneSelectorProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-  const [newPhoneId, setNewPhoneId] = useState("");
   const [newPhoneName, setNewPhoneName] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +48,6 @@ export default function PhoneSelector({
     if (!isOpen) {
       setSearchQuery("");
       setDebouncedSearchQuery("");
-      setNewPhoneId("");
       setNewPhoneName("");
       setError(null);
       setIsAdding(false);
@@ -57,8 +55,8 @@ export default function PhoneSelector({
   }, [isOpen]);
 
   const handleAddPhone = async () => {
-    if (!newPhoneId.trim() || !newPhoneName.trim()) {
-      setError("Vui lòng nhập đầy đủ ID máy và tên máy");
+    if (!newPhoneName.trim()) {
+      setError("Vui lòng nhập tên máy");
       return;
     }
 
@@ -69,7 +67,6 @@ export default function PhoneSelector({
       const warehouseId = employee?.warehouseId;
       const newPhoneData: Omit<Phone, "id" | "createdAt" | "updatedAt"> = {
         name: newPhoneName.trim(),
-        model: newPhoneId.trim(), // Store custom ID in model field
         data: [],
         totalQuantity: 0,
         status: "out_of_stock",
@@ -96,7 +93,6 @@ export default function PhoneSelector({
 
       // Select the newly added phone
       onSelect(newPhone);
-      setNewPhoneId("");
       setNewPhoneName("");
       onClose();
     } catch (err) {
@@ -198,9 +194,7 @@ export default function PhoneSelector({
                     {phone.name}
                   </div>
                   <div className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                    {phone.model && `ID: ${phone.model} • `}
-                    Tổng số lượng: {phone.totalQuantity} • Firestore ID:{" "}
-                    {phone.id}
+                    Tổng số lượng: {phone.totalQuantity}
                   </div>
                 </button>
               ))}
@@ -210,43 +204,26 @@ export default function PhoneSelector({
 
         {/* Add New Phone Section */}
         <div className="p-6 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
-          <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-4">
-            Thêm Máy Mới
-          </h3>
           {error && (
             <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
               {error}
             </div>
           )}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                ID Máy
-              </label>
-              <input
-                type="text"
-                value={newPhoneId}
-                onChange={(e) => setNewPhoneId(e.target.value)}
-                placeholder="Nhập ID máy"
-                className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
-              />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Tên Máy
-              </label>
-              <input
-                type="text"
-                value={newPhoneName}
-                onChange={(e) => setNewPhoneName(e.target.value)}
-                placeholder="Nhập tên máy"
-                className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
-              />
-            </div>
+          <div>
+            <label className="mb-2 block text-sm font-bold text-zinc-700 dark:text-zinc-300">
+              Thêm Máy Mới
+            </label>
+            <input
+              type="text"
+              value={newPhoneName}
+              onChange={(e) => setNewPhoneName(e.target.value)}
+              placeholder="Nhập tên máy"
+              className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
+            />
           </div>
           <button
             onClick={handleAddPhone}
-            disabled={isAdding || !newPhoneId.trim() || !newPhoneName.trim()}
+            disabled={isAdding || !newPhoneName.trim()}
             className="mt-4 w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed dark:focus:ring-offset-zinc-900"
           >
             {isAdding ? "Đang thêm..." : "Thêm Máy Mới"}

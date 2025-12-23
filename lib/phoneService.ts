@@ -18,7 +18,6 @@ import { db } from "./firebase";
 export interface Phone {
   id: string;
   name: string;
-  model: string;
   data: Array<{ color: string; quantity: number; price: number }>;
   totalQuantity: number;
   status: "in_stock" | "low_stock" | "out_of_stock";
@@ -42,12 +41,8 @@ const calculateStatus = (
 };
 
 // Helper function to generate search keywords from phone data
-const generateSearchKeywords = (
-  id: string,
-  name: string,
-  model: string
-): string[] => {
-  const text = `${id} ${name} ${model}`.toLowerCase();
+const generateSearchKeywords = (name: string): string[] => {
+  const text = `${name}`.toLowerCase();
   // Tách thành các từ và loại bỏ các ký tự đặc biệt
   const words = text
     .split(/\s+/)
@@ -93,7 +88,6 @@ const docToPhone = (doc: QueryDocumentSnapshot<DocumentData>): Phone => {
   return {
     id: doc.id,
     name: data.name || "",
-    model: data.model || "",
     data: phoneDataWithPrice,
     totalQuantity: totalQuantity,
     status: data.status || calculateStatus(totalQuantity),
@@ -153,13 +147,12 @@ export const getPhones = async (
         .filter((word) => word.length > 0);
 
       phones = phones.filter((phone) => {
-        // Tạo searchable text từ id, name, model
+        // Tạo searchable text từ id, name
         // Normalize: thay thế dấu gạch ngang và gạch dưới bằng space để dễ search
         const normalizedId = phone.id.toLowerCase().replace(/[-_]/g, " ");
         const normalizedName = phone.name.toLowerCase();
-        const normalizedModel = phone.model.toLowerCase().replace(/[-_]/g, " ");
 
-        const searchableText = `${normalizedId} ${normalizedName} ${normalizedModel}`;
+        const searchableText = `${normalizedId} ${normalizedName}`;
 
         // Kiểm tra tất cả các từ đều có trong searchableText
         // Sử dụng word boundary hoặc space để match chính xác hơn
@@ -205,11 +198,7 @@ export const addPhone = async (
     const status = calculateStatus(phoneData.totalQuantity);
 
     // Generate search keywords
-    const searchKeywords = generateSearchKeywords(
-      "", // id sẽ được tạo sau khi add
-      phoneData.name,
-      phoneData.model
-    );
+    const searchKeywords = generateSearchKeywords(phoneData.name);
 
     const newPhone = {
       ...phoneData,
@@ -219,14 +208,6 @@ export const addPhone = async (
       updatedAt: Timestamp.now()
     };
     const docRef = await addDoc(phonesRef, newPhone);
-
-    // Update searchKeywords với id sau khi document được tạo
-    const searchKeywordsWithId = generateSearchKeywords(
-      docRef.id,
-      phoneData.name,
-      phoneData.model
-    );
-    await updateDoc(docRef, { searchKeywords: searchKeywordsWithId });
 
     return docRef.id;
   } catch (error) {
@@ -262,14 +243,13 @@ export const updatePhone = async (
       updateData.status = calculateStatus(phoneData.totalQuantity);
     }
 
-    // Update searchKeywords if name or model is being updated
-    if (phoneData.name !== undefined || phoneData.model !== undefined) {
-      // Cần fetch document hiện tại để lấy name và model
+    // Update searchKeywords if name is being updated
+    if (phoneData.name !== undefined) {
+      // Cần fetch document hiện tại để lấy name
       const currentDoc = await getDoc(phoneRef);
       const currentData = currentDoc.data();
       const name = phoneData.name ?? currentData?.name ?? "";
-      const model = phoneData.model ?? currentData?.model ?? "";
-      updateData.searchKeywords = generateSearchKeywords(id, name, model);
+      updateData.searchKeywords = generateSearchKeywords(name);
     }
 
     await updateDoc(phoneRef, updateData);

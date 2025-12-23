@@ -41,7 +41,6 @@ export default function PhoneTable({
     id: string,
     phoneData: {
       name: string;
-      model: string;
       data: Array<{ color: string; quantity: number; price: number }>;
       condition?: string;
     }
@@ -127,9 +126,6 @@ export default function PhoneTable({
                 <td className="whitespace-nowrap px-6 py-4">
                   <div className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
                     {phone.name}
-                  </div>
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                    {phone.model}
                   </div>
                 </td>
                 <td className="px-6 py-4 text-sm text-zinc-900 dark:text-zinc-50">

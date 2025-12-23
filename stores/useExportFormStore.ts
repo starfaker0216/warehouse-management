@@ -114,7 +114,7 @@ export const useExportFormStore = create<ExportFormState>((set, get) => ({
       formData: {
         ...initialFormData,
         phoneId: phone.id,
-        phoneName: `${phone.name} ${phone.model}`.trim(),
+        phoneName: phone.name.trim(),
         color: selectedColor,
         salePrice: defaultPrice
       },
