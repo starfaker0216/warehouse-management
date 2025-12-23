@@ -93,6 +93,7 @@ function ExportForm() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await handleSubmit();
+    router.push("/");
   };
 
   return (
