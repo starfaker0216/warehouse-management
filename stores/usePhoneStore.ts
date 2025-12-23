@@ -5,13 +5,18 @@ import {
   updatePhone as updatePhoneService,
   deletePhone as deletePhoneService
 } from "../lib/phoneService";
-import { getListPhoneDetails, PhoneDetail } from "../lib/phoneDetailService";
+import {
+  getListPhoneDetails,
+  PhoneDetail,
+  updatePhoneDetail as updatePhoneDetailService
+} from "../lib/phoneDetailService";
 import { useAuthStore } from "./useAuthStore";
 
 interface PhoneState {
   listPhoneDetails: PhoneDetail[];
   loading: boolean;
   error: string | null;
+  currentSearchTerm: string | undefined;
   fetchListPhoneDetails: (searchTerm?: string) => Promise<void>;
   addPhone: (
     phoneData: Omit<Phone, "id" | "createdAt" | "updatedAt">
@@ -21,6 +26,12 @@ interface PhoneState {
     phoneData: Partial<Omit<Phone, "id" | "createdAt" | "updatedAt">>
   ) => Promise<void>;
   deletePhone: (id: string) => Promise<void>;
+  updatePhoneDetail: (
+    id: string,
+    phoneDetailData: Partial<
+      Omit<PhoneDetail, "id" | "createdAt" | "updatedAt">
+    >
+  ) => Promise<void>;
   setListPhoneDetails: (listPhoneDetails: PhoneDetail[]) => void;
 }
 
@@ -28,8 +39,10 @@ export const usePhoneStore = create<PhoneState>((set) => ({
   listPhoneDetails: [],
   loading: false,
   error: null,
+  currentSearchTerm: undefined,
 
   fetchListPhoneDetails: async (searchTerm?: string) => {
+    set({ currentSearchTerm: searchTerm });
     set({ loading: true, error: null });
     try {
       // Ensure auth is initialized first
@@ -124,6 +137,38 @@ export const usePhoneStore = create<PhoneState>((set) => ({
       }
     } catch (err) {
       console.error("Error deleting phone:", err);
+      throw err;
+    }
+  },
+
+  updatePhoneDetail: async (id, phoneDetailData) => {
+    try {
+      // Get employee info
+      const employee = useAuthStore.getState().employee;
+      const employeeId = employee?.id || "";
+      const employeeName = employee?.name || "";
+      const warehouseId = employee?.warehouseId;
+
+      // Update phoneDetail with employee info
+      await updatePhoneDetailService(id, {
+        ...phoneDetailData,
+        updatedBy: {
+          employeeId,
+          employeeName
+        }
+      });
+
+      // Fetch lại với cùng search term
+      if (warehouseId) {
+        const currentState = usePhoneStore.getState();
+        const listPhoneDetailsData = await getListPhoneDetails(
+          warehouseId,
+          currentState.currentSearchTerm
+        );
+        set({ listPhoneDetails: listPhoneDetailsData });
+      }
+    } catch (err) {
+      console.error("Error updating phone detail:", err);
       throw err;
     }
   },

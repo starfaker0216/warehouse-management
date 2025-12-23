@@ -1,15 +1,54 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PhoneDetail } from "../../lib/phoneDetailService";
 import { formatCurrency } from "../../utils/currencyUtils";
+import { useAuth } from "../../contexts/AuthContext";
+import { usePhoneStore } from "../../stores/usePhoneStore";
+import EditPhoneDetailModal from "./EditPhoneDetailModal";
 
 interface PhoneTableProps {
   listPhoneDetails: PhoneDetail[];
+  searchTerm?: string;
 }
 
-export default function PhoneTable({ listPhoneDetails }: PhoneTableProps) {
+export default function PhoneTable({
+  listPhoneDetails,
+  searchTerm
+}: PhoneTableProps) {
   const router = useRouter();
+  const { employee } = useAuth();
+  const isAdmin = employee?.role === "admin";
+  const { updatePhoneDetail, fetchListPhoneDetails } = usePhoneStore();
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedPhoneDetail, setSelectedPhoneDetail] =
+    useState<PhoneDetail | null>(null);
+
+  const handleEditClick = (phoneDetail: PhoneDetail, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedPhoneDetail(phoneDetail);
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsEditModalOpen(false);
+    setSelectedPhoneDetail(null);
+  };
+
+  const handleSave = async (
+    id: string,
+    phoneDetailData: {
+      color: string;
+      salePrice: number;
+      status: string;
+      imei: string;
+    }
+  ) => {
+    await updatePhoneDetail(id, phoneDetailData);
+    // Refresh list with current search state
+    await fetchListPhoneDetails(searchTerm);
+  };
 
   const handleRowClick = (phoneDetail: PhoneDetail, e: React.MouseEvent) => {
     // Don't navigate if clicking on the edit button
@@ -56,6 +95,9 @@ export default function PhoneTable({ listPhoneDetails }: PhoneTableProps) {
               <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                 Tình trạng máy
               </th>
+              {isAdmin && (
+                <th className="w-fit py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400"></th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 bg-white dark:divide-zinc-800 dark:bg-zinc-900">
@@ -93,11 +135,32 @@ export default function PhoneTable({ listPhoneDetails }: PhoneTableProps) {
                     </span>
                   )}
                 </td>
+                {isAdmin && (
+                  <td className="whitespace-nowrap py-4 text-sm">
+                    <div className="flex justify-center">
+                      <button
+                        type="button"
+                        onClick={(e) => handleEditClick(phoneDetail, e)}
+                        className="rounded-lg border border-zinc-300 bg-white px-1.5 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 hover:border-blue-500 hover:text-blue-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors"
+                      >
+                        Chỉnh sửa
+                      </button>
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Edit Modal */}
+      <EditPhoneDetailModal
+        isOpen={isEditModalOpen}
+        onClose={handleCloseModal}
+        phoneDetail={selectedPhoneDetail}
+        onSave={handleSave}
+      />
     </div>
   );
 }

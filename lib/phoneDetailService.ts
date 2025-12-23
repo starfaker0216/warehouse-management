@@ -13,7 +13,7 @@ import {
   DocumentData
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { getPhone, Phone } from "./phoneService";
+import { getPhone, Phone, getPhones } from "./phoneService";
 
 export interface PhoneDetail {
   id: string;
@@ -230,44 +230,22 @@ const enrichPhoneDetailsWithNames = (
     });
 };
 
-// Helper: Parse search term into search words
-const parseSearchWords = (searchTerm: string): string[] => {
-  return searchTerm
-    .toLowerCase()
-    .trim()
-    .split(/\s+/)
-    .filter((word) => word.length > 0);
+// Helper: Search phones by searchTerm and return matching phoneIds
+const searchPhonesAndGetIds = async (
+  warehouseId: string,
+  searchTerm: string
+): Promise<string[]> => {
+  const phones = await getPhones(warehouseId, searchTerm);
+  return phones.map((phone) => phone.id);
 };
 
-// Helper: Check if a phoneDetail matches all search words
-const matchesSearchWords = (
-  phoneDetail: PhoneDetail,
-  searchWords: string[]
-): boolean => {
-  const normalizedId = phoneDetail.id.toLowerCase().replace(/[-_]/g, " ");
-  const normalizedName = (phoneDetail.name || "").toLowerCase();
-  const searchableText = `${normalizedId} ${normalizedName}`;
-
-  return searchWords.every((word) => {
-    const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const regex = new RegExp(escapedWord, "i");
-    return regex.test(searchableText);
-  });
-};
-
-// Helper: Filter phoneDetails by search term
-const filterBySearchTerm = (
+// Helper: Filter phoneDetails by phoneIds
+const filterPhoneDetailsByPhoneIds = (
   phoneDetails: PhoneDetail[],
-  searchTerm?: string
+  phoneIds: string[]
 ): PhoneDetail[] => {
-  if (!searchTerm || !searchTerm.trim()) {
-    return phoneDetails;
-  }
-
-  const searchWords = parseSearchWords(searchTerm);
-  return phoneDetails.filter((detail) =>
-    matchesSearchWords(detail, searchWords)
-  );
+  const phoneIdSet = new Set(phoneIds);
+  return phoneDetails.filter((detail) => phoneIdSet.has(detail.phoneId));
 };
 
 // Helper: Sort phoneDetails by createdAt descending
@@ -285,23 +263,38 @@ export const getListPhoneDetails = async (
   searchTerm?: string
 ): Promise<PhoneDetail[]> => {
   try {
-    // Step 1: Get all phoneDetails for this warehouse
-    const phoneDetails = await getPhoneDetailsByWarehouseId(warehouseId);
+    // Step 1: If searchTerm provided, search phones first and get matching phoneIds
+    let matchingPhoneIds: string[] | null = null;
+    if (searchTerm && searchTerm.trim()) {
+      matchingPhoneIds = await searchPhonesAndGetIds(warehouseId, searchTerm);
+      // If no phones match, return empty array
+      if (matchingPhoneIds.length === 0) {
+        return [];
+      }
+    }
 
-    // Step 2: Get unique phoneIds and fetch phone documents
+    // Step 2: Get phoneDetails for this warehouse
+    let phoneDetails = await getPhoneDetailsByWarehouseId(warehouseId);
+
+    // Step 3: Filter phoneDetails by matching phoneIds if search was performed
+    if (matchingPhoneIds) {
+      phoneDetails = filterPhoneDetailsByPhoneIds(
+        phoneDetails,
+        matchingPhoneIds
+      );
+    }
+
+    // Step 4: Get unique phoneIds and fetch phone documents
     const uniquePhoneIds = getUniquePhoneIds(phoneDetails);
     const phoneMap = await createPhoneMap(uniquePhoneIds);
 
-    // Step 3: Enrich phoneDetails with phone names
+    // Step 5: Enrich phoneDetails with phone names
     let enrichedPhoneDetails = enrichPhoneDetailsWithNames(
       phoneDetails,
       phoneMap
     );
 
-    // Step 4: Filter by search term if provided
-    enrichedPhoneDetails = filterBySearchTerm(enrichedPhoneDetails, searchTerm);
-
-    // Step 5: Sort by createdAt descending
+    // Step 6: Sort by createdAt descending
     enrichedPhoneDetails = sortByCreatedAt(enrichedPhoneDetails);
 
     return enrichedPhoneDetails;

@@ -1,18 +1,8 @@
 import { useMemo } from "react";
 import { Phone } from "../lib/phoneService";
 
-export function usePhoneFilters(
-  phones: Phone[],
-  searchTerm: string,
-  filterStatus: string
-) {
+export function usePhoneFilters(phones: Phone[], searchTerm: string) {
   return useMemo(() => {
-    if (!searchTerm.trim()) {
-      return phones.filter(
-        (phone) => filterStatus === "all" || phone.status === filterStatus
-      );
-    }
-
     // Tách searchTerm thành các từ riêng lẻ và loại bỏ khoảng trắng thừa
     const searchWords = searchTerm
       .toLowerCase()
@@ -22,19 +12,14 @@ export function usePhoneFilters(
 
     return phones.filter((phone) => {
       // Tạo một chuỗi kết hợp từ tất cả các trường có thể tìm kiếm
-      const searchableText = [
-        phone.id.toLowerCase(),
-        phone.name.toLowerCase()
-      ].join(" ");
+      const searchableText = [phone.name.toLowerCase()].join(" ");
 
       // Kiểm tra xem tất cả các từ trong searchTerm có xuất hiện trong searchableText không
       const matchesSearch = searchWords.every((word) =>
         searchableText.includes(word)
       );
 
-      const matchesStatus =
-        filterStatus === "all" || phone.status === filterStatus;
-      return matchesSearch && matchesStatus;
+      return matchesSearch;
     });
-  }, [phones, searchTerm, filterStatus]);
+  }, [phones, searchTerm]);
 }

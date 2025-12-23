@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../contexts/AuthContext";
 import { usePhoneStore } from "../stores/usePhoneStore";
@@ -19,7 +19,11 @@ export default function Home() {
     usePhoneStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
+
+  // Memoize handleSearchChange to prevent PhoneFilters from re-rendering
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchTerm(value);
+  }, []);
 
   // Debounce search term
   useEffect(() => {
@@ -63,14 +67,6 @@ export default function Home() {
     return null;
   }
 
-  if (loading) {
-    return <Loading message="Đang tải dữ liệu..." />;
-  }
-
-  if (error) {
-    return <ErrorDisplay error={error} />;
-  }
-
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -87,28 +83,47 @@ export default function Home() {
         {/* Statistics Cards */}
         <StatisticsCards statistics={statistics} />
 
-        {/* Filters and Search */}
+        {/* Filters and Search - Always render to maintain focus */}
         <PhoneFilters
           searchTerm={searchTerm}
-          filterStatus={filterStatus}
-          onSearchChange={setSearchTerm}
-          onFilterChange={setFilterStatus}
+          onSearchChange={handleSearchChange}
         />
 
-        {/* Inventory Table - Desktop */}
-        <div className="hidden md:block">
-          <PhoneTable listPhoneDetails={listPhoneDetails} />
-        </div>
+        {/* Loading or Error State */}
+        {loading && (
+          <div className="mb-6">
+            <Loading message="Đang tải dữ liệu..." />
+          </div>
+        )}
 
-        {/* Summary */}
-        <div className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
-          Hiển thị {listPhoneDetails.length} sản phẩm
-        </div>
+        {error && (
+          <div className="mb-6">
+            <ErrorDisplay error={error} />
+          </div>
+        )}
 
-        {/* Inventory List - Mobile */}
-        <div className="md:hidden mt-6">
-          <ListPhone listPhoneDetails={listPhoneDetails} />
-        </div>
+        {/* Content - Only show when not loading and no error */}
+        {!loading && !error && (
+          <>
+            {/* Inventory Table - Desktop */}
+            <div className="hidden md:block">
+              <PhoneTable
+                listPhoneDetails={listPhoneDetails}
+                searchTerm={debouncedSearchTerm}
+              />
+            </div>
+
+            {/* Summary */}
+            <div className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
+              Hiển thị {listPhoneDetails.length} sản phẩm
+            </div>
+
+            {/* Inventory List - Mobile */}
+            <div className="md:hidden mt-6">
+              <ListPhone listPhoneDetails={listPhoneDetails} />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
