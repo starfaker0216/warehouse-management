@@ -24,7 +24,7 @@ export const parseDate = (value: string): Date | null => {
   if (!cleaned) return null;
 
   // Extract day, month, year from the cleaned string
-  // Format should be DDMMYYYY (8 digits)
+  // Format should be DDMMYYYY (8 digits minimum, but can be up to 10 for full year)
   if (cleaned.length < 8) {
     // If incomplete, try to parse what we have
     // For partial input, we'll be lenient
@@ -33,7 +33,14 @@ export const parseDate = (value: string): Date | null => {
 
   const day = parseInt(cleaned.substring(0, 2), 10);
   const month = parseInt(cleaned.substring(2, 4), 10) - 1; // Month is 0-indexed
-  const year = parseInt(cleaned.substring(4, 8), 10);
+  // Take up to 4 digits for year (positions 4-8, or 4-10 if available)
+  const yearStr = cleaned.substring(4, Math.min(8, cleaned.length));
+  const year = parseInt(yearStr, 10);
+
+  // If year is less than 4 digits, it's incomplete
+  if (yearStr.length < 4) {
+    return null;
+  }
 
   // Validate date
   const date = new Date(year, month, day);
@@ -56,8 +63,8 @@ export const formatDateInput = (value: string): string => {
   // Remove all non-digit characters
   const digits = value.replace(/[^\d]/g, "");
 
-  // Limit to 8 digits (DDMMYYYY)
-  const limited = digits.substring(0, 8);
+  // Limit to 10 digits (DDMMYYYY - 2+2+4 for year)
+  const limited = digits.substring(0, 10);
 
   if (limited.length === 0) return "";
 
@@ -65,13 +72,15 @@ export const formatDateInput = (value: string): string => {
   let formatted = "";
 
   if (limited.length >= 1) {
-    formatted += limited.substring(0, 2);
+    formatted += limited.substring(0, Math.min(2, limited.length));
   }
   if (limited.length >= 3) {
-    formatted += " / " + limited.substring(2, 4);
+    formatted += " / " + limited.substring(2, Math.min(4, limited.length));
   }
   if (limited.length >= 5) {
-    formatted += " / " + limited.substring(4, 8);
+    // Take remaining digits for year (up to 4 digits)
+    const yearDigits = limited.substring(4, Math.min(8, limited.length));
+    formatted += " / " + yearDigits;
   }
 
   return formatted;
