@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { PhoneDetail } from "../../lib/phoneDetailService";
 import { formatCurrency } from "../../utils/currencyUtils";
 import { useAuth } from "../../contexts/AuthContext";
 import { usePhoneStore } from "../../stores/usePhoneStore";
+import { useWarehouseStore } from "../../stores/useWarehouseStore";
 import EditPhoneDetailModal from "./EditPhoneDetailModal";
+import ImportDetailModal from "../history/ImportDetailModal";
 
 interface ListPhoneProps {
   listPhoneDetails: PhoneDetail[];
@@ -18,9 +20,19 @@ export default function ListPhone({ listPhoneDetails }: ListPhoneProps) {
   const isAdmin = employee?.role === "admin";
   const { updatePhoneDetail, fetchListPhoneDetails, currentSearchTerm } =
     usePhoneStore();
+  const { warehouses, fetchWarehouses } = useWarehouseStore();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedPhoneDetail, setSelectedPhoneDetail] =
     useState<PhoneDetail | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [selectedImportId, setSelectedImportId] = useState<string | null>(null);
+  const [selectedWarehouseName, setSelectedWarehouseName] = useState<
+    string | undefined
+  >(undefined);
+
+  useEffect(() => {
+    fetchWarehouses();
+  }, [fetchWarehouses]);
 
   const handleEditClick = (phoneDetail: PhoneDetail, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -50,6 +62,27 @@ export default function ListPhone({ listPhoneDetails }: ListPhoneProps) {
 
   const handleDeleted = async () => {
     await fetchListPhoneDetails(currentSearchTerm);
+  };
+
+  const handleViewImportClick = (
+    phoneDetail: PhoneDetail,
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation();
+    if (phoneDetail.importId) {
+      setSelectedImportId(phoneDetail.importId);
+      const warehouse = warehouses.find(
+        (w) => w.id === phoneDetail.warehouseId
+      );
+      setSelectedWarehouseName(warehouse?.name);
+      setIsImportModalOpen(true);
+    }
+  };
+
+  const handleCloseImportModal = () => {
+    setIsImportModalOpen(false);
+    setSelectedImportId(null);
+    setSelectedWarehouseName(undefined);
   };
 
   const handleCardClick = (phoneDetail: PhoneDetail, e: React.MouseEvent) => {
@@ -91,13 +124,24 @@ export default function ListPhone({ listPhoneDetails }: ListPhoneProps) {
                 </h3>
               </div>
               {isAdmin && (
-                <button
-                  type="button"
-                  onClick={(e) => handleEditClick(phoneDetail, e)}
-                  className="ml-2 rounded-lg border border-zinc-300 bg-white px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 hover:border-blue-500 hover:text-blue-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors"
-                >
-                  Chỉnh sửa
-                </button>
+                <div className="ml-2 flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => handleEditClick(phoneDetail, e)}
+                    className="rounded-lg border border-zinc-300 bg-white px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 hover:border-blue-500 hover:text-blue-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors"
+                  >
+                    Chỉnh sửa
+                  </button>
+                  {phoneDetail.importId && (
+                    <button
+                      type="button"
+                      onClick={(e) => handleViewImportClick(phoneDetail, e)}
+                      className="rounded-lg border border-zinc-300 bg-white px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 hover:border-blue-500 hover:text-blue-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors"
+                    >
+                      Xem Phiếu Nhập
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 
@@ -148,6 +192,14 @@ export default function ListPhone({ listPhoneDetails }: ListPhoneProps) {
         phoneDetail={selectedPhoneDetail}
         onSave={handleSave}
         onDeleted={handleDeleted}
+      />
+
+      {/* Import Detail Modal */}
+      <ImportDetailModal
+        isOpen={isImportModalOpen}
+        onClose={handleCloseImportModal}
+        importRecordId={selectedImportId}
+        warehouseName={selectedWarehouseName}
       />
     </div>
   );
