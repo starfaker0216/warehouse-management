@@ -285,44 +285,64 @@ const sortByCreatedAt = (phoneDetails: PhoneDetail[]): PhoneDetail[] => {
   });
 };
 
+// Helper: Filter phoneDetails by IMEI
+const filterPhoneDetailsByImei = (
+  phoneDetails: PhoneDetail[],
+  searchTerm: string
+): PhoneDetail[] => {
+  const lowerSearchTerm = searchTerm.toLowerCase().trim();
+  return phoneDetails.filter((detail) =>
+    detail.imei.toLowerCase().includes(lowerSearchTerm)
+  );
+};
+
 // Get list of phoneDetails with phone name populated - each phoneDetail is a separate row
 export const getListPhoneDetails = async (
   warehouseId: string,
   searchTerm?: string
 ): Promise<PhoneDetail[]> => {
   try {
-    // Step 1: If searchTerm provided, search phones first and get matching phoneIds
-    let matchingPhoneIds: string[] | null = null;
-    if (searchTerm && searchTerm.trim()) {
-      matchingPhoneIds = await searchPhonesAndGetIds(searchTerm);
-      // If no phones match, return empty array
-      if (matchingPhoneIds.length === 0) {
-        return [];
-      }
-    }
-
-    // Step 2: Get phoneDetails for this warehouse
+    // Step 1: Get phoneDetails for this warehouse
     let phoneDetails = await getPhoneDetailsByWarehouseId(warehouseId);
 
-    // Step 3: Filter phoneDetails by matching phoneIds if search was performed
-    if (matchingPhoneIds) {
-      phoneDetails = filterPhoneDetailsByPhoneIds(
+    // Step 2: If searchTerm provided, search by both IMEI and phone name
+    if (searchTerm && searchTerm.trim()) {
+      const trimmedSearchTerm = searchTerm.trim();
+
+      // Search by IMEI
+      const imeiMatches = filterPhoneDetailsByImei(
         phoneDetails,
-        matchingPhoneIds
+        trimmedSearchTerm
       );
+
+      // Search by phone name
+      const matchingPhoneIds = await searchPhonesAndGetIds(trimmedSearchTerm);
+      const phoneNameMatches =
+        matchingPhoneIds.length > 0
+          ? filterPhoneDetailsByPhoneIds(phoneDetails, matchingPhoneIds)
+          : [];
+
+      // Merge results and remove duplicates
+      const allMatches = [...imeiMatches, ...phoneNameMatches];
+      const uniqueMatches = allMatches.filter(
+        (detail, index, self) =>
+          index === self.findIndex((d) => d.id === detail.id)
+      );
+
+      phoneDetails = uniqueMatches;
     }
 
-    // Step 4: Get unique phoneIds and fetch phone documents
+    // Step 3: Get unique phoneIds and fetch phone documents
     const uniquePhoneIds = getUniquePhoneIds(phoneDetails);
     const phoneMap = await createPhoneMap(uniquePhoneIds);
 
-    // Step 5: Enrich phoneDetails with phone names
+    // Step 4: Enrich phoneDetails with phone names
     let enrichedPhoneDetails = enrichPhoneDetailsWithNames(
       phoneDetails,
       phoneMap
     );
 
-    // Step 6: Sort by createdAt descending
+    // Step 5: Sort by createdAt descending
     enrichedPhoneDetails = sortByCreatedAt(enrichedPhoneDetails);
 
     return enrichedPhoneDetails;

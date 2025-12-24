@@ -43,7 +43,7 @@ function PhoneFilters({ searchTerm, onSearchChange }: PhoneFiltersProps) {
           <input
             ref={inputRef}
             type="text"
-            placeholder="Tìm kiếm theo tên, model..."
+            placeholder="Tìm kiếm theo tên, IMEI..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             onFocus={handleFocus}
