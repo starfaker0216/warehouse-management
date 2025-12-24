@@ -1,8 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PhoneDetail } from "../../lib/phoneDetailService";
 import { formatCurrency } from "../../utils/currencyUtils";
+import { useAuth } from "../../contexts/AuthContext";
+import { usePhoneStore } from "../../stores/usePhoneStore";
+import EditPhoneDetailModal from "./EditPhoneDetailModal";
 
 interface ListPhoneProps {
   listPhoneDetails: PhoneDetail[];
@@ -10,6 +14,42 @@ interface ListPhoneProps {
 
 export default function ListPhone({ listPhoneDetails }: ListPhoneProps) {
   const router = useRouter();
+  const { employee } = useAuth();
+  const isAdmin = employee?.role === "admin";
+  const { updatePhoneDetail, fetchListPhoneDetails, currentSearchTerm } =
+    usePhoneStore();
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedPhoneDetail, setSelectedPhoneDetail] =
+    useState<PhoneDetail | null>(null);
+
+  const handleEditClick = (phoneDetail: PhoneDetail, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedPhoneDetail(phoneDetail);
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsEditModalOpen(false);
+    setSelectedPhoneDetail(null);
+  };
+
+  const handleSave = async (
+    id: string,
+    phoneDetailData: {
+      color: string;
+      salePrice: number;
+      status: string;
+      imei: string;
+    }
+  ) => {
+    await updatePhoneDetail(id, phoneDetailData);
+    // Refresh list with current search state
+    await fetchListPhoneDetails(currentSearchTerm);
+  };
+
+  const handleDeleted = async () => {
+    await fetchListPhoneDetails(currentSearchTerm);
+  };
 
   const handleCardClick = (phoneDetail: PhoneDetail, e: React.MouseEvent) => {
     // Don't navigate if clicking on the edit button
@@ -49,6 +89,15 @@ export default function ListPhone({ listPhoneDetails }: ListPhoneProps) {
                   {phoneDetail.name}
                 </h3>
               </div>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={(e) => handleEditClick(phoneDetail, e)}
+                  className="ml-2 rounded-lg border border-zinc-300 bg-white px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 hover:border-blue-500 hover:text-blue-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors"
+                >
+                  Chỉnh sửa
+                </button>
+              )}
             </div>
 
             {/* Color and Price */}
@@ -83,6 +132,15 @@ export default function ListPhone({ listPhoneDetails }: ListPhoneProps) {
           </div>
         </div>
       ))}
+
+      {/* Edit Modal */}
+      <EditPhoneDetailModal
+        isOpen={isEditModalOpen}
+        onClose={handleCloseModal}
+        phoneDetail={selectedPhoneDetail}
+        onSave={handleSave}
+        onDeleted={handleDeleted}
+      />
     </div>
   );
 }

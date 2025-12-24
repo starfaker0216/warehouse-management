@@ -174,7 +174,7 @@ export default function EditPhoneDetailModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-zinc-300 bg-white px-6 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+              className="rounded-lg border border-zinc-300 bg-white px-3 md:px-6 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
             >
               Hủy
             </button>
@@ -186,7 +186,7 @@ export default function EditPhoneDetailModal({
                 handleDelete({ phoneDetail, onDeleted, onClose });
               }}
               disabled={loading || deleting}
-              className="rounded-lg border border-red-500 bg-white px-6 py-2 text-sm font-medium text-red-600 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 dark:border-red-500/70 dark:bg-zinc-800 dark:text-red-300 dark:hover:bg-red-500/10"
+              className="rounded-lg border border-red-500 bg-white px-3 md:px-6 py-2 text-sm font-medium text-red-600 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 dark:border-red-500/70 dark:bg-zinc-800 dark:text-red-300 dark:hover:bg-red-500/10"
             >
               {deleting ? "Đang xoá..." : "Xoá"}
             </button>
@@ -194,7 +194,7 @@ export default function EditPhoneDetailModal({
             <button
               type="submit"
               disabled={loading || deleting}
-              className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+              className="rounded-lg bg-blue-600 px-3 md:px-6 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
             >
               {loading ? "Đang lưu..." : "Lưu thay đổi"}
             </button>
