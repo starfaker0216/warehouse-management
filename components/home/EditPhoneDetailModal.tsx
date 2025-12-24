@@ -18,6 +18,7 @@ interface EditPhoneDetailModalProps {
       salePrice: number;
       status: string;
       imei: string;
+      importPrice: number;
     }
   ) => Promise<void>;
   onDeleted?: () => Promise<void>;
@@ -37,6 +38,8 @@ export default function EditPhoneDetailModal({
     imei,
     salePrice,
     salePriceInputValue,
+    importPrice,
+    importPriceInputValue,
     loading,
     deleting,
     setColor,
@@ -44,6 +47,8 @@ export default function EditPhoneDetailModal({
     setImei,
     setSalePrice,
     setSalePriceInputValue,
+    setImportPrice,
+    setImportPriceInputValue,
     initialize,
     handleSubmit,
     handleDelete
@@ -138,6 +143,20 @@ export default function EditPhoneDetailModal({
               onChange={(e) => setImei(e.target.value)}
               className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
               placeholder="Nhập IMEI"
+            />
+          </div>
+
+          {/* Import Price */}
+          <div>
+            <PriceInput
+              value={importPrice}
+              inputValue={importPriceInputValue}
+              onValueChange={(price) => setImportPrice(price)}
+              onInputValueChange={(value) => setImportPriceInputValue(value)}
+              placeholder="Nhập giá nhập"
+              id="import-price-input"
+              label="Giá nhập"
+              maxSuggestions={3}
             />
           </div>
 

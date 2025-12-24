@@ -11,7 +11,13 @@ interface SubmitArgs {
   phoneDetail: PhoneDetail;
   onSave: (
     id: string,
-    data: { color: string; salePrice: number; status: string; imei: string }
+    data: {
+      color: string;
+      salePrice: number;
+      status: string;
+      imei: string;
+      importPrice: number;
+    }
   ) => Promise<void>;
   colors: string[];
   fetchColors: () => Promise<void>;
@@ -31,6 +37,8 @@ interface EditPhoneDetailState {
   imei: string;
   salePrice: number;
   salePriceInputValue: string;
+  importPrice: number;
+  importPriceInputValue: string;
   loading: boolean;
   deleting: boolean;
   setColor: (value: string) => void;
@@ -38,6 +46,8 @@ interface EditPhoneDetailState {
   setImei: (value: string) => void;
   setSalePrice: (value: number) => void;
   setSalePriceInputValue: (value: string) => void;
+  setImportPrice: (value: number) => void;
+  setImportPriceInputValue: (value: string) => void;
   initialize: (phoneDetail: PhoneDetail | null, isOpen: boolean) => void;
   handleSubmit: (args: SubmitArgs) => Promise<void>;
   handleDelete: (args: DeleteArgs) => Promise<void>;
@@ -49,6 +59,8 @@ const initialState = {
   imei: "",
   salePrice: 0,
   salePriceInputValue: "",
+  importPrice: 0,
+  importPriceInputValue: "",
   loading: false,
   deleting: false
 };
@@ -62,6 +74,8 @@ export const useEditPhoneDetailStore = create<EditPhoneDetailState>(
     setImei: (value) => set({ imei: value }),
     setSalePrice: (value) => set({ salePrice: value }),
     setSalePriceInputValue: (value) => set({ salePriceInputValue: value }),
+    setImportPrice: (value) => set({ importPrice: value }),
+    setImportPriceInputValue: (value) => set({ importPriceInputValue: value }),
 
     initialize: (phoneDetail, isOpen) => {
       if (!phoneDetail || !isOpen) return;
@@ -72,6 +86,10 @@ export const useEditPhoneDetailStore = create<EditPhoneDetailState>(
         salePrice: phoneDetail.salePrice || 0,
         salePriceInputValue: phoneDetail.salePrice
           ? formatCurrencyInput(phoneDetail.salePrice)
+          : "",
+        importPrice: phoneDetail.importPrice || 0,
+        importPriceInputValue: phoneDetail.importPrice
+          ? formatCurrencyInput(phoneDetail.importPrice)
           : ""
       });
     },
@@ -87,7 +105,15 @@ export const useEditPhoneDetailStore = create<EditPhoneDetailState>(
       if (!phoneDetail) return;
 
       const state = get();
-      const { color, status, imei, salePrice, salePriceInputValue } = state;
+      const {
+        color,
+        status,
+        imei,
+        salePrice,
+        salePriceInputValue,
+        importPrice,
+        importPriceInputValue
+      } = state;
 
       if (!color.trim()) {
         toast.error("Vui lòng nhập màu sắc");
@@ -98,10 +124,14 @@ export const useEditPhoneDetailStore = create<EditPhoneDetailState>(
         ? parseCurrencyInput(salePriceInputValue)
         : salePrice;
 
-      if (parsedSalePrice <= 0) {
+      if (parsedSalePrice < 0) {
         toast.error("Vui lòng nhập giá bán hợp lệ");
         return;
       }
+
+      const parsedImportPrice = importPriceInputValue
+        ? parseCurrencyInput(importPriceInputValue)
+        : importPrice;
 
       set({ loading: true });
       try {
@@ -122,7 +152,8 @@ export const useEditPhoneDetailStore = create<EditPhoneDetailState>(
           color: trimmedColor,
           salePrice: parsedSalePrice,
           status: status.trim(),
-          imei: imei.trim()
+          imei: imei.trim(),
+          importPrice: parsedImportPrice
         });
 
         toast.success("Cập nhật thông tin máy thành công");

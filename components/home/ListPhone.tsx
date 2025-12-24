@@ -40,6 +40,7 @@ export default function ListPhone({ listPhoneDetails }: ListPhoneProps) {
       salePrice: number;
       status: string;
       imei: string;
+      importPrice: number;
     }
   ) => {
     await updatePhoneDetail(id, phoneDetailData);
@@ -109,10 +110,17 @@ export default function ListPhone({ listPhoneDetails }: ListPhoneProps) {
                   </div>
                 </div>
                 <div className="ml-3 text-right">
-                  <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                  {isAdmin &&
+                    phoneDetail.importPrice &&
+                    phoneDetail.importPrice > 0 && (
+                      <div className="mb-1 text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                        Nhập: {formatCurrency(phoneDetail.importPrice)}
+                      </div>
+                    )}
+                  <div className="text-xs font-semibold text-zinc-900 dark:text-zinc-50">
                     {!phoneDetail.salePrice || phoneDetail.salePrice === 0
-                      ? "Liên hệ Admin"
-                      : formatCurrency(phoneDetail.salePrice)}
+                      ? "Giá: Liên hệ Admin"
+                      : `Bán: ${formatCurrency(phoneDetail.salePrice)}`}
                   </div>
                 </div>
               </div>

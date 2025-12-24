@@ -43,6 +43,7 @@ export default function PhoneTable({
       salePrice: number;
       status: string;
       imei: string;
+      importPrice: number;
     }
   ) => {
     await updatePhoneDetail(id, phoneDetailData);
@@ -93,8 +94,13 @@ export default function PhoneTable({
               <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                 Tình trạng máy
               </th>
+              {isAdmin && (
+                <th className="px-6 py-3 text-left text-xs text-right font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                  Giá nhập
+                </th>
+              )}
               <th className="px-6 py-3 text-left text-xs text-right font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                Giá
+                Giá bán
               </th>
               {isAdmin && (
                 <th className="w-fit py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400"></th>
@@ -129,6 +135,15 @@ export default function PhoneTable({
                     </span>
                   )}
                 </td>
+                {isAdmin && (
+                  <td className="px-6 py-4 text-sm text-right text-zinc-900 dark:text-zinc-50">
+                    <span className="text-zinc-600 dark:text-zinc-400">
+                      {!phoneDetail.importPrice || phoneDetail.importPrice === 0
+                        ? "N/A"
+                        : formatCurrency(phoneDetail.importPrice)}
+                    </span>
+                  </td>
+                )}
                 <td className="px-6 py-4 text-sm text-right text-zinc-900 dark:text-zinc-50">
                   <span className="text-zinc-600 dark:text-zinc-400">
                     {!phoneDetail.salePrice || phoneDetail.salePrice === 0
