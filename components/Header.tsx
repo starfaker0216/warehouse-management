@@ -35,6 +35,11 @@ export default function Header() {
       ariaLabel: "Thống kê"
     });
     navItems.push({
+      label: "Lịch Sử",
+      href: "/history",
+      ariaLabel: "Lịch sử"
+    });
+    navItems.push({
       label: "Quản Lý",
       href: "/admin/create-account",
       ariaLabel: "Quản lý"
