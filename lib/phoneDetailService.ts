@@ -30,6 +30,8 @@ export interface PhoneDetail {
   };
   createdAt?: Date;
   updatedAt?: Date;
+  importId?: string; // id của import record khi được nhập
+  importDate?: Date; // ngày nhập hàng
   // Optional fields populated when joining with phones collection
   name?: string; // Phone name from phones collection
 }
@@ -53,7 +55,9 @@ const docToPhoneDetail = (
       employeeName: ""
     },
     createdAt: data.createdAt?.toDate(),
-    updatedAt: data.updatedAt?.toDate()
+    updatedAt: data.updatedAt?.toDate(),
+    importId: data.importId || undefined,
+    importDate: data.importDate?.toDate()
   };
 };
 
@@ -137,11 +141,17 @@ export const addPhoneDetail = async (
 ): Promise<string> => {
   try {
     const phoneDetailsRef = collection(db, "phoneDetails");
-    const newPhoneDetail = {
+    const newPhoneDetail: Record<string, unknown> = {
       ...phoneDetailData,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now()
     };
+    // Convert importDate to Timestamp if it exists
+    if (phoneDetailData.importDate) {
+      newPhoneDetail.importDate = Timestamp.fromDate(
+        phoneDetailData.importDate
+      );
+    }
     const docRef = await addDoc(phoneDetailsRef, newPhoneDetail);
     return docRef.id;
   } catch (error) {
@@ -158,11 +168,15 @@ export const addPhoneDetails = async (
     const phoneDetailsRef = collection(db, "phoneDetails");
     const now = Timestamp.now();
     const promises = phoneDetailsData.map((data) => {
-      const newPhoneDetail = {
+      const newPhoneDetail: Record<string, unknown> = {
         ...data,
         createdAt: now,
         updatedAt: now
       };
+      // Convert importDate to Timestamp if it exists
+      if (data.importDate) {
+        newPhoneDetail.importDate = Timestamp.fromDate(data.importDate);
+      }
       return addDoc(phoneDetailsRef, newPhoneDetail);
     });
     const docRefs = await Promise.all(promises);
@@ -184,6 +198,10 @@ export const updatePhoneDetail = async (
       ...phoneDetailData,
       updatedAt: Timestamp.now()
     };
+    // Convert importDate to Timestamp if it exists
+    if (phoneDetailData.importDate) {
+      updateData.importDate = Timestamp.fromDate(phoneDetailData.importDate);
+    }
     await updateDoc(phoneDetailRef, updateData);
   } catch (error) {
     console.error("Error updating phone detail:", error);

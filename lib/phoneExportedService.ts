@@ -34,6 +34,8 @@ export interface PhoneExported {
   originalCreatedAt?: Date; // thời gian tạo phoneDetail gốc
   originalUpdatedAt?: Date; // thời gian cập nhật phoneDetail gốc
   exportedAt: Date; // thời gian export
+  importId?: string; // id của import record khi được nhập
+  importDate?: Date; // ngày nhập hàng
 }
 
 // Convert Firestore document to PhoneExported object
@@ -61,7 +63,9 @@ const docToPhoneExported = (
     phoneName: data.phoneName || undefined,
     originalCreatedAt: data.originalCreatedAt?.toDate(),
     originalUpdatedAt: data.originalUpdatedAt?.toDate(),
-    exportedAt: data.exportedAt?.toDate() || new Date()
+    exportedAt: data.exportedAt?.toDate() || new Date(),
+    importId: data.importId || undefined,
+    importDate: data.importDate?.toDate()
   };
 };
 
@@ -74,6 +78,7 @@ export const addPhoneExported = async (
 ): Promise<string> => {
   try {
     const phoneExportedsRef = collection(db, "phoneExporteds");
+
     const phoneExportedData: Omit<PhoneExported, "id"> = {
       phoneDetailId: phoneDetail.id,
       exportRecordId,
@@ -90,10 +95,12 @@ export const addPhoneExported = async (
       phoneName: phoneDetail.name,
       originalCreatedAt: phoneDetail.createdAt,
       originalUpdatedAt: phoneDetail.updatedAt,
-      exportedAt: new Date()
+      exportedAt: new Date(),
+      importId: phoneDetail.importId,
+      importDate: phoneDetail.importDate
     };
 
-    const newPhoneExported = {
+    const newPhoneExported: Record<string, unknown> = {
       ...phoneExportedData,
       exportedAt: Timestamp.now(),
       ...(phoneExportedData.originalCreatedAt && {
@@ -107,6 +114,13 @@ export const addPhoneExported = async (
         )
       })
     };
+
+    // Convert importDate to Timestamp if it exists
+    if (phoneExportedData.importDate) {
+      newPhoneExported.importDate = Timestamp.fromDate(
+        phoneExportedData.importDate
+      );
+    }
 
     const docRef = await addDoc(phoneExportedsRef, newPhoneExported);
     return docRef.id;

@@ -8,6 +8,7 @@ import {
   getEmployeeInfo,
   createPhoneDetails
 } from "./helper/importFunction";
+import { updatePhoneDetail } from "../lib/phoneDetailService";
 import toast from "react-hot-toast";
 
 const initialFormData: ImportFormData = {
@@ -178,8 +179,8 @@ export const useImportFormStore = create<ImportFormState>((set, get) => ({
         state.formData.items
       );
 
-      // Save import record with phoneDetailIds
-      await addImportRecord({
+      // Save import record with phoneDetailIds and get importId
+      const importId = await addImportRecord({
         phoneId: state.formData.phoneId,
         importDate: state.formData.importDate,
         phoneType: state.formData.phoneType,
@@ -191,6 +192,15 @@ export const useImportFormStore = create<ImportFormState>((set, get) => ({
         employeeName,
         warehouseId
       });
+
+      // Update all phone details with importId and importDate
+      const updatePromises = phoneDetailIds.map((phoneDetailId) =>
+        updatePhoneDetail(phoneDetailId, {
+          importId,
+          importDate: state.formData.importDate
+        })
+      );
+      await Promise.all(updatePromises);
 
       // Reset form and show success
       get().resetForm();

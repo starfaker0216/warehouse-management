@@ -208,7 +208,7 @@ export const useExportFormStore = create<ExportFormState>((set, get) => ({
         // Fetch full phone detail data
         const phoneDetail = await getPhoneDetail(formData.phoneDetailId);
         if (phoneDetail) {
-          // Save to phoneExporteds collection
+          // Save to phoneExporteds collection (importId and importDate will be copied from phoneDetail)
           await addPhoneExported(
             phoneDetail,
             exportRecordId,
