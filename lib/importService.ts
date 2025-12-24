@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   getDocs,
+  getDoc,
   addDoc,
   updateDoc,
   deleteDoc,
@@ -61,6 +62,25 @@ export const getImportRecords = async (): Promise<ImportRecord[]> => {
     return querySnapshot.docs.map(docToImportRecord);
   } catch (error) {
     console.error("Error getting import records:", error);
+    throw error;
+  }
+};
+
+// Get a single import record by id
+export const getImportRecordById = async (
+  id: string
+): Promise<ImportRecord | null> => {
+  try {
+    const importRef = doc(db, "imports", id);
+    const docSnapshot = await getDoc(importRef);
+    if (docSnapshot.exists()) {
+      return docToImportRecord(
+        docSnapshot as QueryDocumentSnapshot<DocumentData>
+      );
+    }
+    return null;
+  } catch (error) {
+    console.error("Error getting import record by id:", error);
     throw error;
   }
 };
