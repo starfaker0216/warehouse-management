@@ -15,34 +15,20 @@ export default function Header() {
   }
 
   // Build navigation items
-  const navItems: PillNavItem[] = [
-    {
-      label: "Trang Chủ",
-      href: "/",
-      ariaLabel: "Trang chủ"
-    },
-    {
+  const navItems: PillNavItem[] = [];
+
+  // Add Quản Lý link only for admin users
+  if (isAuthenticated && employee?.role === "admin") {
+    navItems.push({
       label: "Nhập Hàng",
       href: "/import",
       ariaLabel: "Nhập hàng"
-    }
-  ];
-
-  // Add Income/Expense link for admin and manager
-  if (
-    isAuthenticated &&
-    employee &&
-    (employee.role === "admin" || employee.role === "manager")
-  ) {
+    });
     navItems.push({
       label: "Thu / Chi",
       href: "/income-expense",
       ariaLabel: "Thu Chi"
     });
-  }
-
-  // Add Quản Lý link only for admin users
-  if (isAuthenticated && employee?.role === "admin") {
     navItems.push({
       label: "Thống Kê",
       href: "/statistics",
