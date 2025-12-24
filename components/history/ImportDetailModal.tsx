@@ -14,12 +14,27 @@ import DateInputField from "../import/DateInputField";
 import SupplierSelectorField from "../import/SupplierSelectorField";
 import { getSuppliers } from "../../lib/configService";
 import toast from "react-hot-toast";
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  DocumentData
+} from "firebase/firestore";
+import { db } from "../../lib/firebase";
+import { getPhone } from "../../lib/phoneService";
 
 interface ImportDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   importRecordId: string | null;
   warehouseName?: string;
+}
+
+type PhoneStatus = "in_warehouse" | "exported" | "recycled";
+
+interface PhoneDetailWithStatus extends PhoneDetail {
+  phoneStatus: PhoneStatus;
 }
 
 export default function ImportDetailModal({
@@ -29,7 +44,7 @@ export default function ImportDetailModal({
   warehouseName
 }: ImportDetailModalProps) {
   const [importRecord, setImportRecord] = useState<ImportRecord | null>(null);
-  const [phoneDetails, setPhoneDetails] = useState<PhoneDetail[]>([]);
+  const [phoneDetails, setPhoneDetails] = useState<PhoneDetailWithStatus[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -67,13 +82,123 @@ export default function ImportDetailModal({
           });
           setDateInputValue(formatDate(record.importDate));
 
-          // Load phone details
+          // Load phone details from 3 collections
           if (record.phoneDetailIds && record.phoneDetailIds.length > 0) {
-            const details = await Promise.all(
-              record.phoneDetailIds.map((id) => getPhoneDetail(id))
+            // Load all phoneRecycles for this import once
+            let phoneRecycles: Array<{
+              data: DocumentData;
+              phone: Awaited<ReturnType<typeof getPhone>>;
+            }> = [];
+            try {
+              const phoneRecyclesRef = collection(db, "phoneRecycles");
+              const q = query(
+                phoneRecyclesRef,
+                where("importId", "==", record.id)
+              );
+              const querySnapshot = await getDocs(q);
+              phoneRecycles = await Promise.all(
+                querySnapshot.docs.map(async (doc) => {
+                  const data = doc.data();
+                  const phone = data.phoneId
+                    ? await getPhone(data.phoneId)
+                    : null;
+                  return { data, phone };
+                })
+              );
+            } catch (err) {
+              console.error("Error loading phoneRecycles:", err);
+            }
+
+            let recycleIndex = 0;
+
+            const detailsWithStatus = await Promise.all(
+              record.phoneDetailIds.map(async (id) => {
+                // Try to find in phoneDetails first
+                const phoneDetail = await getPhoneDetail(id);
+                if (phoneDetail) {
+                  return {
+                    ...phoneDetail,
+                    phoneStatus: "in_warehouse" as PhoneStatus
+                  };
+                }
+
+                // If not found, try to find in phoneExporteds
+                try {
+                  const phoneExportedsRef = collection(db, "phoneExporteds");
+                  const q = query(
+                    phoneExportedsRef,
+                    where("phoneDetailId", "==", id)
+                  );
+                  const querySnapshot = await getDocs(q);
+                  if (!querySnapshot.empty) {
+                    const exportedDoc = querySnapshot.docs[0];
+                    const data = exportedDoc.data();
+                    const phone = data.phoneId
+                      ? await getPhone(data.phoneId)
+                      : null;
+
+                    const phoneDetailData: PhoneDetailWithStatus = {
+                      id: data.phoneDetailId || id,
+                      phoneId: data.phoneId || "",
+                      warehouseId: data.warehouseId || "",
+                      color: data.color || "",
+                      imei: data.imei || "",
+                      importPrice: data.importPrice || 0,
+                      salePrice: data.salePrice || 0,
+                      status: data.status || "",
+                      updatedBy: data.updatedBy || {
+                        employeeId: "",
+                        employeeName: ""
+                      },
+                      createdAt: data.originalCreatedAt?.toDate(),
+                      updatedAt: data.originalUpdatedAt?.toDate(),
+                      importId: data.importId || undefined,
+                      importDate: data.importDate?.toDate(),
+                      name: phone?.name || data.phoneName || undefined,
+                      phoneStatus: "exported" as PhoneStatus
+                    };
+                    return phoneDetailData;
+                  }
+                } catch (err) {
+                  console.error("Error finding in phoneExporteds:", err);
+                }
+
+                // If still not found, try to find in phoneRecycles
+                // Match by index since we don't have the original id
+                if (recycleIndex < phoneRecycles.length) {
+                  const { data, phone } = phoneRecycles[recycleIndex];
+                  recycleIndex++;
+
+                  const phoneDetailData: PhoneDetailWithStatus = {
+                    id: id, // Use original id
+                    phoneId: data.phoneId || "",
+                    warehouseId: data.warehouseId || "",
+                    color: data.color || "",
+                    imei: data.imei || "",
+                    importPrice: data.importPrice || 0,
+                    salePrice: data.salePrice || 0,
+                    status: data.status || "",
+                    updatedBy: data.updatedBy || {
+                      employeeId: "",
+                      employeeName: ""
+                    },
+                    createdAt: data.createdAt?.toDate(),
+                    updatedAt: data.updatedAt?.toDate(),
+                    importId: data.importId || undefined,
+                    importDate: data.importDate?.toDate(),
+                    name: phone?.name || undefined,
+                    phoneStatus: "recycled" as PhoneStatus
+                  };
+                  return phoneDetailData;
+                }
+
+                // If not found in any collection, return null
+                return null;
+              })
             );
-            const validDetails = details.filter(
-              (detail): detail is PhoneDetail => detail !== null
+
+            const validDetails = detailsWithStatus.filter(
+              (detail): detail is PhoneDetailWithStatus => detail !== null
             );
             setPhoneDetails(validDetails);
           } else {
@@ -409,111 +534,186 @@ export default function ImportDetailModal({
                             Giá bán
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
-                            Tình trạng
+                            Tình trạng máy
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
+                            Trạng thái
                           </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-200 bg-white dark:divide-zinc-800 dark:bg-zinc-900">
-                        {phoneDetails.map((detail, index) => (
-                          <tr
-                            key={detail.id}
-                            className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
-                          >
-                            <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-900 dark:text-zinc-50">
-                              {index + 1}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-900 dark:text-zinc-50">
-                              {detail.color || "N/A"}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-900 dark:text-zinc-50">
-                              {detail.imei || "N/A"}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-900 dark:text-zinc-50">
-                              {formatCurrency(detail.importPrice || 0)}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-900 dark:text-zinc-50">
-                              {formatCurrency(detail.salePrice || 0)}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-900 dark:text-zinc-50">
-                              {detail.status || "N/A"}
-                            </td>
-                          </tr>
-                        ))}
+                        {phoneDetails.map((detail, index) => {
+                          const getStatusText = (status: PhoneStatus) => {
+                            switch (status) {
+                              case "in_warehouse":
+                                return "Còn trong kho";
+                              case "exported":
+                                return "Đã bán";
+                              case "recycled":
+                                return "Đã xoá";
+                              default:
+                                return "N/A";
+                            }
+                          };
+
+                          const getStatusColor = (status: PhoneStatus) => {
+                            switch (status) {
+                              case "in_warehouse":
+                                return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400";
+                              case "exported":
+                                return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400";
+                              case "recycled":
+                                return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400";
+                              default:
+                                return "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-400";
+                            }
+                          };
+
+                          return (
+                            <tr
+                              key={detail.id}
+                              className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                            >
+                              <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-900 dark:text-zinc-50">
+                                {index + 1}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-900 dark:text-zinc-50">
+                                {detail.color || "N/A"}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-900 dark:text-zinc-50">
+                                {detail.imei || "N/A"}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-900 dark:text-zinc-50">
+                                {formatCurrency(detail.importPrice || 0)}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-900 dark:text-zinc-50">
+                                {formatCurrency(detail.salePrice || 0)}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-900 dark:text-zinc-50">
+                                {detail.status || "N/A"}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3 text-sm">
+                                <span
+                                  className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(
+                                    detail.phoneStatus
+                                  )}`}
+                                >
+                                  {getStatusText(detail.phoneStatus)}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
 
                   {/* Mobile Card View */}
                   <div className="space-y-3 md:hidden">
-                    {phoneDetails.map((detail, index) => (
-                      <div
-                        key={detail.id}
-                        className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
-                      >
-                        <div className="p-4">
-                          {/* Header: STT */}
-                          <div className="mb-3 flex items-start justify-between border-b border-zinc-200 pb-2 dark:border-zinc-800">
-                            <div className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-                              STT: {index + 1}
-                            </div>
-                          </div>
+                    {phoneDetails.map((detail, index) => {
+                      const getStatusText = (status: PhoneStatus) => {
+                        switch (status) {
+                          case "in_warehouse":
+                            return "Còn trong kho";
+                          case "exported":
+                            return "Đã bán";
+                          case "recycled":
+                            return "Đã xoá";
+                          default:
+                            return "N/A";
+                        }
+                      };
 
-                          {/* Color and IMEI */}
-                          <div className="mb-3 space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                                Màu sắc:
-                              </span>
-                              <span className="text-sm text-zinc-900 dark:text-zinc-50">
-                                {detail.color || "N/A"}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                                IMEI:
-                              </span>
-                              <span className="text-sm text-zinc-900 dark:text-zinc-50">
-                                {detail.imei || "N/A"}
-                              </span>
-                            </div>
-                          </div>
+                      const getStatusColor = (status: PhoneStatus) => {
+                        switch (status) {
+                          case "in_warehouse":
+                            return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400";
+                          case "exported":
+                            return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400";
+                          case "recycled":
+                            return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400";
+                          default:
+                            return "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-400";
+                        }
+                      };
 
-                          {/* Prices */}
-                          <div className="mb-3 rounded-lg border border-zinc-200 bg-zinc-50 p-2.5 dark:border-zinc-800 dark:bg-zinc-800/50">
-                            <div className="space-y-1">
+                      return (
+                        <div
+                          key={detail.id}
+                          className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+                        >
+                          <div className="p-4">
+                            {/* Header: STT and Status */}
+                            <div className="mb-3 flex items-start justify-between border-b border-zinc-200 pb-2 dark:border-zinc-800">
+                              <div className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                                STT: {index + 1}
+                              </div>
+                              <span
+                                className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(
+                                  detail.phoneStatus
+                                )}`}
+                              >
+                                {getStatusText(detail.phoneStatus)}
+                              </span>
+                            </div>
+
+                            {/* Color and IMEI */}
+                            <div className="mb-3 space-y-2">
                               <div className="flex items-center justify-between">
                                 <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                                  Giá nhập:
+                                  Màu sắc:
                                 </span>
-                                <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-50">
-                                  {formatCurrency(detail.importPrice || 0)}
+                                <span className="text-sm text-zinc-900 dark:text-zinc-50">
+                                  {detail.color || "N/A"}
                                 </span>
                               </div>
                               <div className="flex items-center justify-between">
                                 <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                                  Giá bán:
+                                  IMEI:
                                 </span>
-                                <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-50">
-                                  {formatCurrency(detail.salePrice || 0)}
+                                <span className="text-sm text-zinc-900 dark:text-zinc-50">
+                                  {detail.imei || "N/A"}
                                 </span>
                               </div>
                             </div>
-                          </div>
 
-                          {/* Status */}
-                          {detail.status && (
-                            <div className="border-t border-zinc-200 pt-3 dark:border-zinc-800">
-                              <div className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                                Tình trạng:
-                              </div>
-                              <div className="mt-1 whitespace-pre-wrap break-words text-sm text-zinc-700 dark:text-zinc-300">
-                                {detail.status}
+                            {/* Prices */}
+                            <div className="mb-3 rounded-lg border border-zinc-200 bg-zinc-50 p-2.5 dark:border-zinc-800 dark:bg-zinc-800/50">
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                                    Giá nhập:
+                                  </span>
+                                  <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-50">
+                                    {formatCurrency(detail.importPrice || 0)}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                                    Giá bán:
+                                  </span>
+                                  <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-50">
+                                    {formatCurrency(detail.salePrice || 0)}
+                                  </span>
+                                </div>
                               </div>
                             </div>
-                          )}
+
+                            {/* Status */}
+                            {detail.status && (
+                              <div className="border-t border-zinc-200 pt-3 dark:border-zinc-800">
+                                <div className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                                  Tình trạng máy:
+                                </div>
+                                <div className="mt-1 whitespace-pre-wrap break-words text-sm text-zinc-700 dark:text-zinc-300">
+                                  {detail.status}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
