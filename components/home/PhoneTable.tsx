@@ -190,7 +190,7 @@ export default function PhoneTable({
                       <button
                         type="button"
                         onClick={(e) => handleEditClick(phoneDetail, e)}
-                        className="rounded-lg border border-zinc-300 bg-white px-1.5 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 hover:border-blue-500 hover:text-blue-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors"
+                        className="w-full max-w-32 rounded-lg border border-zinc-300 bg-white px-1.5 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 hover:border-blue-500 hover:text-blue-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors"
                       >
                         Chỉnh sửa
                       </button>
@@ -198,7 +198,7 @@ export default function PhoneTable({
                         <button
                           type="button"
                           onClick={(e) => handleViewImportClick(phoneDetail, e)}
-                          className="rounded-lg border border-zinc-300 bg-white px-1.5 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 hover:border-blue-500 hover:text-blue-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors"
+                          className="w-full max-w-32 rounded-lg border border-zinc-300 bg-white px-1.5 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 hover:border-blue-500 hover:text-blue-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors"
                         >
                           Xem Phiếu Nhập
                         </button>
