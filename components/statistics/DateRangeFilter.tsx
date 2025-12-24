@@ -79,7 +79,11 @@ export default function DateRangeFilter({
           </label>
           <select
             value={selectedWarehouseId || "all"}
-            onChange={(e) => onWarehouseChange(e.target.value === "all" ? null : e.target.value)}
+            onChange={(e) =>
+              onWarehouseChange(
+                e.target.value === "all" ? null : e.target.value
+              )
+            }
             className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
           >
             <option value="all">Tất cả kho</option>
@@ -165,14 +169,14 @@ export default function DateRangeFilter({
           <button
             type="button"
             onClick={onApply}
-            className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900"
+            className="flex-1 rounded-lg bg-blue-600 px-2 py-2 min-w-20 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900"
           >
             Áp dụng
           </button>
           <button
             type="button"
             onClick={onClear}
-            className="flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+            className="flex-1 rounded-lg border border-zinc-300 bg-white px-2 py-2 min-w-20 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
           >
             Xóa lọc
           </button>

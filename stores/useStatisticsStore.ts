@@ -73,7 +73,7 @@ const calculatePhoneTotals = (
 ): Pick<StatisticsTotals, "totalRemainingQuantity" | "totalInventoryValue"> => {
   const filteredPhoneDetails = phoneDetails.filter((phoneDetail) => {
     if (!start && !end) return true;
-    const refDate = phoneDetail.updatedAt || phoneDetail.createdAt;
+    const refDate = phoneDetail.importDate;
     return isWithinRange(refDate, start, end);
   });
 
@@ -96,16 +96,12 @@ const calculateImportValue = async (
   end?: Date | null
 ): Promise<number> => {
   const matchingPhoneDetails = phoneDetails.filter((phoneDetail) => {
-    const isInDateRange = isWithinRange(phoneDetail.createdAt, start, end);
+    const isInDateRange = isWithinRange(phoneDetail.importDate, start, end);
     return isInDateRange;
   });
 
   const matchingPhoneExporteds = phoneExporteds.filter((phoneExported) => {
-    const isInDateRange = isWithinRange(
-      phoneExported.originalCreatedAt,
-      start,
-      end
-    );
+    const isInDateRange = isWithinRange(phoneExported.importDate, start, end);
     return isInDateRange;
   });
 
