@@ -269,7 +269,7 @@ const PillNav: React.FC<PillNavProps> = ({
       >
         {isRouterLink(items?.[0]?.href) ? (
           <Link
-            href={items[0].href}
+            href={"/"}
             aria-label="Home"
             onMouseEnter={handleLogoEnter}
             role="menuitem"

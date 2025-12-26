@@ -15,13 +15,7 @@ export default function Header() {
   }
 
   // Build navigation items
-  const navItems: PillNavItem[] = [
-    {
-      label: "Trang Chủ",
-      href: "/",
-      ariaLabel: "Trang chủ"
-    }
-  ];
+  const navItems: PillNavItem[] = [];
 
   // Add Quản Lý link only for admin users
   if (isAuthenticated && employee?.role === "admin") {
@@ -29,6 +23,11 @@ export default function Header() {
       label: "Nhập Hàng",
       href: "/import",
       ariaLabel: "Nhập hàng"
+    });
+    navItems.push({
+      label: "Lịch sử",
+      href: "/history",
+      ariaLabel: "Lịch sử"
     });
     navItems.push({
       label: "Thu / Chi",
