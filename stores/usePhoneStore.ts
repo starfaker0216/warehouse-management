@@ -19,6 +19,11 @@ interface PhoneState {
   loading: boolean;
   error: string | null;
   currentSearchTerm: string | undefined;
+  currentPage: number;
+  itemsPerPage: number;
+  totalCount: number;
+  setCurrentPage: (page: number) => void;
+  reloadListPhoneDetails: () => Promise<void>;
   fetchListPhoneDetails: (searchTerm?: string) => Promise<void>;
   fetchPhones: (searchTerm?: string) => Promise<void>;
   setPhones: (phones: Phone[]) => void;
@@ -45,6 +50,10 @@ export const usePhoneStore = create<PhoneState>((set) => ({
   loading: false,
   error: null,
   currentSearchTerm: undefined,
+  currentPage: 1,
+  itemsPerPage: 20,
+  totalCount: 0,
+  setCurrentPage: (page: number) => set({ currentPage: page }),
 
   fetchPhones: async (searchTerm?: string) => {
     set({ loading: true, error: null });
@@ -91,8 +100,19 @@ export const usePhoneStore = create<PhoneState>((set) => ({
 
   setPhones: (phones) => set({ phones }),
 
+  reloadListPhoneDetails: async () => {
+    const currentState = usePhoneStore.getState();
+    set({ currentPage: 1 });
+    await currentState.fetchListPhoneDetails(currentState.currentSearchTerm);
+  },
+
   fetchListPhoneDetails: async (searchTerm?: string) => {
-    set({ currentSearchTerm: searchTerm });
+    const currentState = usePhoneStore.getState();
+    const isSearchTermChanged = currentState.currentSearchTerm !== searchTerm;
+    set({
+      currentSearchTerm: searchTerm,
+      currentPage: isSearchTermChanged ? 1 : currentState.currentPage
+    });
     set({ loading: true, error: null });
     try {
       // Ensure auth is initialized first
@@ -125,11 +145,18 @@ export const usePhoneStore = create<PhoneState>((set) => ({
         return;
       }
 
-      const listPhoneDetailsData = await getListPhoneDetails(
+      const currentState = usePhoneStore.getState();
+      const result = await getListPhoneDetails(
         warehouseId,
-        searchTerm
+        searchTerm,
+        currentState.currentPage,
+        currentState.itemsPerPage
       );
-      set({ listPhoneDetails: listPhoneDetailsData, loading: false });
+      set({
+        listPhoneDetails: result.phoneDetails,
+        totalCount: result.totalCount,
+        loading: false
+      });
     } catch (err) {
       console.error("Error loading list phone details:", err);
       set({
@@ -142,13 +169,8 @@ export const usePhoneStore = create<PhoneState>((set) => ({
   addPhone: async (phoneData) => {
     try {
       await addPhoneService(phoneData);
-      // Fetch lại với cùng search và filter nếu có
-      const employee = useAuthStore.getState().employee;
-      const warehouseId = employee?.warehouseId;
-      if (warehouseId) {
-        const listPhoneDetailsData = await getListPhoneDetails(warehouseId);
-        set({ listPhoneDetails: listPhoneDetailsData });
-      }
+      const currentState = usePhoneStore.getState();
+      await currentState.reloadListPhoneDetails();
     } catch (err) {
       console.error("Error adding phone:", err);
       throw err;
@@ -161,14 +183,10 @@ export const usePhoneStore = create<PhoneState>((set) => ({
       const employee = useAuthStore.getState().employee;
       const employeeId = employee?.id || "";
       const employeeName = employee?.name || "";
-      const warehouseId = employee?.warehouseId;
 
       await updatePhoneService(id, phoneData, employeeId, employeeName);
-      // Fetch lại với cùng search và filter nếu có
-      if (warehouseId) {
-        const listPhoneDetailsData = await getListPhoneDetails(warehouseId);
-        set({ listPhoneDetails: listPhoneDetailsData });
-      }
+      const currentState = usePhoneStore.getState();
+      await currentState.reloadListPhoneDetails();
     } catch (err) {
       console.error("Error updating phone:", err);
       throw err;
@@ -178,13 +196,8 @@ export const usePhoneStore = create<PhoneState>((set) => ({
   deletePhone: async (id) => {
     try {
       await deletePhoneService(id);
-      // Fetch lại với cùng search và filter nếu có
-      const employee = useAuthStore.getState().employee;
-      const warehouseId = employee?.warehouseId;
-      if (warehouseId) {
-        const listPhoneDetailsData = await getListPhoneDetails(warehouseId);
-        set({ listPhoneDetails: listPhoneDetailsData });
-      }
+      const currentState = usePhoneStore.getState();
+      await currentState.reloadListPhoneDetails();
     } catch (err) {
       console.error("Error deleting phone:", err);
       throw err;
@@ -197,7 +210,6 @@ export const usePhoneStore = create<PhoneState>((set) => ({
       const employee = useAuthStore.getState().employee;
       const employeeId = employee?.id || "";
       const employeeName = employee?.name || "";
-      const warehouseId = employee?.warehouseId;
 
       // Update phoneDetail with employee info
       await updatePhoneDetailService(id, {
@@ -207,16 +219,8 @@ export const usePhoneStore = create<PhoneState>((set) => ({
           employeeName
         }
       });
-
-      // Fetch lại với cùng search term
-      if (warehouseId) {
-        const currentState = usePhoneStore.getState();
-        const listPhoneDetailsData = await getListPhoneDetails(
-          warehouseId,
-          currentState.currentSearchTerm
-        );
-        set({ listPhoneDetails: listPhoneDetailsData });
-      }
+      const currentState = usePhoneStore.getState();
+      await currentState.reloadListPhoneDetails();
     } catch (err) {
       console.error("Error updating phone detail:", err);
       throw err;

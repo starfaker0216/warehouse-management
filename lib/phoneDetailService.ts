@@ -8,9 +8,12 @@ import {
   deleteDoc,
   query,
   where,
+  limit,
+  startAfter,
   Timestamp,
   QueryDocumentSnapshot,
-  DocumentData
+  DocumentData,
+  QueryConstraint
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { getPhone, Phone, getPhones } from "./phoneService";
@@ -267,85 +270,338 @@ const searchPhonesAndGetIds = async (searchTerm: string): Promise<string[]> => {
   return phones.map((phone) => phone.id);
 };
 
-// Helper: Filter phoneDetails by phoneIds
-const filterPhoneDetailsByPhoneIds = (
-  phoneDetails: PhoneDetail[],
-  phoneIds: string[]
-): PhoneDetail[] => {
-  const phoneIdSet = new Set(phoneIds);
-  return phoneDetails.filter((detail) => phoneIdSet.has(detail.phoneId));
-};
-
-// Helper: Sort phoneDetails by createdAt descending
-const sortByCreatedAt = (phoneDetails: PhoneDetail[]): PhoneDetail[] => {
-  return [...phoneDetails].sort((a, b) => {
-    const aTime = a.createdAt?.getTime() || 0;
-    const bTime = b.createdAt?.getTime() || 0;
-    return bTime - aTime; // Descending order
-  });
-};
-
-// Helper: Filter phoneDetails by IMEI
-const filterPhoneDetailsByImei = (
-  phoneDetails: PhoneDetail[],
-  searchTerm: string
-): PhoneDetail[] => {
-  const lowerSearchTerm = searchTerm.toLowerCase().trim();
-  return phoneDetails.filter((detail) =>
-    detail.imei.toLowerCase().includes(lowerSearchTerm)
+// Helper: Get count of phoneDetails for a specific phoneId and warehouseId
+const getPhoneDetailsCountByPhoneId = async (
+  warehouseId: string,
+  phoneId: string
+): Promise<number> => {
+  const phoneDetailsRef = collection(db, "phoneDetails");
+  const q = query(
+    phoneDetailsRef,
+    where("warehouseId", "==", warehouseId),
+    where("phoneId", "==", phoneId)
   );
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.length;
+};
+
+// Helper: Get paginated phoneDetails for a specific phoneId and warehouseId
+const getPhoneDetailsByPhoneIdPaginated = async (
+  warehouseId: string,
+  phoneId: string,
+  page: number = 1,
+  itemsPerPage: number = 20
+): Promise<PhoneDetail[]> => {
+  const phoneDetailsRef = collection(db, "phoneDetails");
+  const baseQuery = query(
+    phoneDetailsRef,
+    where("warehouseId", "==", warehouseId),
+    where("phoneId", "==", phoneId)
+  );
+
+  // Get total count
+  const countSnapshot = await getDocs(baseQuery);
+  const totalCount = countSnapshot.docs.length;
+
+  if (totalCount === 0) {
+    return [];
+  }
+
+  // Apply pagination
+  const startIndex = (page - 1) * itemsPerPage;
+  const paginatedQuery: QueryConstraint[] = [
+    where("warehouseId", "==", warehouseId),
+    where("phoneId", "==", phoneId),
+    ...(startIndex > 0 && countSnapshot.docs.length > startIndex
+      ? [startAfter(countSnapshot.docs[startIndex - 1])]
+      : []),
+    limit(itemsPerPage)
+  ];
+
+  const querySnapshot = await getDocs(
+    query(phoneDetailsRef, ...paginatedQuery)
+  );
+  return querySnapshot.docs.map(docToPhoneDetail);
+};
+
+// Helper: Query phoneDetails by IMEI (exact match or starts with)
+const getPhoneDetailsByImei = async (
+  warehouseId: string,
+  searchTerm: string
+): Promise<PhoneDetail[]> => {
+  const phoneDetailsRef = collection(db, "phoneDetails");
+  const trimmedSearchTerm = searchTerm.trim();
+
+  // Try exact match first
+  const exactQuery = query(
+    phoneDetailsRef,
+    where("warehouseId", "==", warehouseId),
+    where("imei", "==", trimmedSearchTerm)
+  );
+
+  try {
+    const exactSnapshot = await getDocs(exactQuery);
+    if (exactSnapshot.docs.length > 0) {
+      return exactSnapshot.docs.map(docToPhoneDetail);
+    }
+  } catch (error) {
+    // If exact match fails (e.g., no index), try starts-with
+    console.log("Exact IMEI match query failed, trying starts-with:", error);
+  }
+
+  return [];
+};
+
+// Helper: Process and enrich phoneDetails with phone names
+const processAndEnrichPhoneDetails = async (
+  phoneDetails: PhoneDetail[]
+): Promise<PhoneDetail[]> => {
+  const uniquePhoneIds = getUniquePhoneIds(phoneDetails);
+  const phoneMap = await createPhoneMap(uniquePhoneIds);
+  return enrichPhoneDetailsWithNames(phoneDetails, phoneMap);
+};
+
+// Helper: Handle IMEI search - returns result immediately if found
+const handleImeiSearch = async (
+  warehouseId: string,
+  searchTerm: string
+): Promise<{
+  phoneDetails: PhoneDetail[];
+  totalCount: number;
+} | null> => {
+  const imeiMatches = await getPhoneDetailsByImei(warehouseId, searchTerm);
+
+  if (imeiMatches.length === 0) {
+    return null;
+  }
+
+  const enrichedPhoneDetails = await processAndEnrichPhoneDetails(imeiMatches);
+
+  return {
+    phoneDetails: enrichedPhoneDetails,
+    totalCount: enrichedPhoneDetails.length
+  };
+};
+
+// Helper: Calculate which phoneIds and pages to query for pagination
+const calculatePhoneIdQueries = (
+  phoneIdCounts: Array<{ phoneId: string; count: number }>,
+  page: number,
+  itemsPerPage: number
+): Array<{
+  phoneId: string;
+  page: number;
+  itemsPerPage: number; // Always full page size for query
+  skipItems: number; // Items to skip from start of page
+  takeItems: number; // Items to take after skipping
+}> => {
+  const startIndex = (page - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const queriesToExecute: Array<{
+    phoneId: string;
+    page: number;
+    itemsPerPage: number; // Always full page size for query
+    skipItems: number; // Items to skip from start of page
+    takeItems: number; // Items to take after skipping
+  }> = [];
+
+  let currentIndex = 0;
+
+  for (const { phoneId, count } of phoneIdCounts) {
+    if (currentIndex >= endIndex) {
+      break;
+    }
+
+    const phoneStartIndex = currentIndex;
+    const phoneEndIndex = currentIndex + count;
+
+    // Check if current page overlaps with this phoneId's range
+    if (phoneEndIndex > startIndex && phoneStartIndex < endIndex) {
+      // Calculate which items from this phoneId we need (local index within this phoneId, 0-based)
+      const phoneLocalStartIndex = Math.max(0, startIndex - phoneStartIndex);
+      const phoneLocalEndIndex = Math.min(count, endIndex - phoneStartIndex);
+
+      // Calculate which pages of this phoneId we need to query
+      // phoneLocalStartIndex and phoneLocalEndIndex are 0-based indices within this phoneId
+      const startPage = Math.floor(phoneLocalStartIndex / itemsPerPage) + 1;
+      const endPage = Math.floor((phoneLocalEndIndex - 1) / itemsPerPage) + 1;
+
+      // Query each page that overlaps with the needed range
+      for (let phonePage = startPage; phonePage <= endPage; phonePage++) {
+        // Calculate the range for this specific page (0-based within phoneId)
+        const pageStartIndex = (phonePage - 1) * itemsPerPage;
+        const pageEndIndex = phonePage * itemsPerPage;
+
+        // Calculate overlap between needed range and this page
+        const overlapStart = Math.max(phoneLocalStartIndex, pageStartIndex);
+        const overlapEnd = Math.min(phoneLocalEndIndex, pageEndIndex);
+
+        // Calculate how many items to skip from the start of this page
+        const skipItems = overlapStart - pageStartIndex;
+        // Calculate how many items to take from this page
+        const takeItems = overlapEnd - overlapStart;
+
+        if (takeItems > 0) {
+          queriesToExecute.push({
+            phoneId,
+            page: phonePage,
+            itemsPerPage, // Always use full page size for query
+            skipItems,
+            takeItems
+          });
+        }
+      }
+    }
+
+    currentIndex = phoneEndIndex;
+  }
+
+  return queriesToExecute;
+};
+
+// Helper: Handle phone name search with pagination
+const handlePhoneNameSearch = async (
+  warehouseId: string,
+  searchTerm: string,
+  page: number,
+  itemsPerPage: number
+): Promise<{
+  phoneDetails: PhoneDetail[];
+  totalCount: number;
+}> => {
+  const matchingPhoneIds = await searchPhonesAndGetIds(searchTerm);
+
+  if (matchingPhoneIds.length === 0) {
+    return { phoneDetails: [], totalCount: 0 };
+  }
+
+  // Get count for each phoneId
+  const phoneIdCounts = await Promise.all(
+    matchingPhoneIds.map(async (phoneId) => {
+      const count = await getPhoneDetailsCountByPhoneId(warehouseId, phoneId);
+      return { phoneId, count };
+    })
+  );
+
+  const totalCount = phoneIdCounts.reduce((sum, item) => sum + item.count, 0);
+
+  if (totalCount === 0) {
+    return { phoneDetails: [], totalCount: 0 };
+  }
+
+  // Calculate which phoneIds and pages to query
+  const queriesToExecute = calculatePhoneIdQueries(
+    phoneIdCounts,
+    page,
+    itemsPerPage
+  );
+
+  // Execute queries in parallel
+  const phoneDetailsPromises = queriesToExecute.map(
+    async ({ phoneId, page, itemsPerPage, skipItems, takeItems }) => {
+      // Get full page of items (always fetch full page size)
+      const fullPageItems = await getPhoneDetailsByPhoneIdPaginated(
+        warehouseId,
+        phoneId,
+        page,
+        itemsPerPage
+      );
+      // Skip items from the start and take only what we need
+      return fullPageItems.slice(skipItems, skipItems + takeItems);
+    }
+  );
+  const phoneDetailsResults = await Promise.all(phoneDetailsPromises);
+
+  // Flatten and trim results to exact page size
+  const allResults = phoneDetailsResults.flat();
+  const paginatedPhoneDetails = allResults.slice(0, itemsPerPage);
+
+  // Enrich with phone names
+  const enrichedPhoneDetails = await processAndEnrichPhoneDetails(
+    paginatedPhoneDetails
+  );
+
+  return {
+    phoneDetails: enrichedPhoneDetails,
+    totalCount
+  };
+};
+
+// Helper: Handle query without search term
+const handleNoSearchTerm = async (
+  warehouseId: string,
+  page: number,
+  itemsPerPage: number
+): Promise<{
+  phoneDetails: PhoneDetail[];
+  totalCount: number;
+}> => {
+  const phoneDetailsRef = collection(db, "phoneDetails");
+  const baseQuery = query(
+    phoneDetailsRef,
+    where("warehouseId", "==", warehouseId)
+  );
+
+  // Get total count
+  const countSnapshot = await getDocs(baseQuery);
+  const totalCount = countSnapshot.docs.length;
+
+  // Apply pagination
+  const startIndex = (page - 1) * itemsPerPage;
+  const paginatedQuery: QueryConstraint[] = [
+    where("warehouseId", "==", warehouseId),
+    ...(startIndex > 0 && countSnapshot.docs.length > startIndex
+      ? [startAfter(countSnapshot.docs[startIndex - 1])]
+      : []),
+    limit(itemsPerPage)
+  ];
+
+  const querySnapshot = await getDocs(
+    query(phoneDetailsRef, ...paginatedQuery)
+  );
+  const phoneDetails = querySnapshot.docs.map(docToPhoneDetail);
+
+  // Enrich with phone names
+  const enrichedPhoneDetails = await processAndEnrichPhoneDetails(phoneDetails);
+
+  return {
+    phoneDetails: enrichedPhoneDetails,
+    totalCount
+  };
 };
 
 // Get list of phoneDetails with phone name populated - each phoneDetail is a separate row
 export const getListPhoneDetails = async (
   warehouseId: string,
-  searchTerm?: string
-): Promise<PhoneDetail[]> => {
+  searchTerm?: string,
+  page: number = 1,
+  itemsPerPage: number = 20
+): Promise<{
+  phoneDetails: PhoneDetail[];
+  totalCount: number;
+}> => {
   try {
-    // Step 1: Get phoneDetails for this warehouse
-    let phoneDetails = await getPhoneDetailsByWarehouseId(warehouseId);
-
-    // Step 2: If searchTerm provided, search by both IMEI and phone name
+    // If search term provided, try IMEI search first
     if (searchTerm && searchTerm.trim()) {
       const trimmedSearchTerm = searchTerm.trim();
 
-      // Search by IMEI
-      const imeiMatches = filterPhoneDetailsByImei(
-        phoneDetails,
-        trimmedSearchTerm
+      // Step 1: Search by IMEI first (returns immediately if found)
+      const imeiResult = await handleImeiSearch(warehouseId, trimmedSearchTerm);
+      if (imeiResult) {
+        return imeiResult;
+      }
+
+      // Step 2: If IMEI search has no results, search by phone name
+      return await handlePhoneNameSearch(
+        warehouseId,
+        trimmedSearchTerm,
+        page,
+        itemsPerPage
       );
-
-      // Search by phone name
-      const matchingPhoneIds = await searchPhonesAndGetIds(trimmedSearchTerm);
-      const phoneNameMatches =
-        matchingPhoneIds.length > 0
-          ? filterPhoneDetailsByPhoneIds(phoneDetails, matchingPhoneIds)
-          : [];
-
-      // Merge results and remove duplicates
-      const allMatches = [...imeiMatches, ...phoneNameMatches];
-      const uniqueMatches = allMatches.filter(
-        (detail, index, self) =>
-          index === self.findIndex((d) => d.id === detail.id)
-      );
-
-      phoneDetails = uniqueMatches;
     }
 
-    // Step 3: Get unique phoneIds and fetch phone documents
-    const uniquePhoneIds = getUniquePhoneIds(phoneDetails);
-    const phoneMap = await createPhoneMap(uniquePhoneIds);
-
-    // Step 4: Enrich phoneDetails with phone names
-    let enrichedPhoneDetails = enrichPhoneDetailsWithNames(
-      phoneDetails,
-      phoneMap
-    );
-
-    // Step 5: Sort by createdAt descending
-    enrichedPhoneDetails = sortByCreatedAt(enrichedPhoneDetails);
-
-    return enrichedPhoneDetails;
+    // No search term: query directly from database
+    return await handleNoSearchTerm(warehouseId, page, itemsPerPage);
   } catch (error) {
     console.error("Error getting list phone details:", error);
     throw error;

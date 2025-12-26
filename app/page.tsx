@@ -5,16 +5,20 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../contexts/AuthContext";
 import { usePhoneStore } from "../stores/usePhoneStore";
 import PhoneFilters from "../components/home/PhoneFilters";
-import PhoneTable from "../components/home/PhoneTable";
-import ListPhone from "../components/home/ListPhone";
+import PhoneList from "../components/home/PhoneList";
 import Loading from "../components/common/Loading";
 import ErrorDisplay from "../components/common/ErrorDisplay";
 
 export default function Home() {
   const { loading: authLoading, isAuthenticated } = useAuth();
   const router = useRouter();
-  const { listPhoneDetails, loading, error, fetchListPhoneDetails } =
-    usePhoneStore();
+  const {
+    listPhoneDetails,
+    loading,
+    error,
+    fetchListPhoneDetails,
+    totalCount
+  } = usePhoneStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
@@ -96,22 +100,14 @@ export default function Home() {
         {/* Content - Only show when not loading and no error */}
         {!loading && !error && (
           <>
-            {/* Inventory Table - Desktop */}
-            <div className="hidden md:block">
-              <PhoneTable
-                listPhoneDetails={listPhoneDetails}
-                searchTerm={debouncedSearchTerm}
-              />
-            </div>
+            <PhoneList
+              listPhoneDetails={listPhoneDetails}
+              searchTerm={debouncedSearchTerm}
+            />
 
             {/* Summary */}
-            <div className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
-              Hiển thị {listPhoneDetails.length} sản phẩm
-            </div>
-
-            {/* Inventory List - Mobile */}
-            <div className="md:hidden mt-6">
-              <ListPhone listPhoneDetails={listPhoneDetails} />
+            <div className="mt-6 text-sm text-center text-zinc-600 dark:text-zinc-400">
+              Tổng cộng {totalCount} sản phẩm
             </div>
           </>
         )}
