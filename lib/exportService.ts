@@ -9,7 +9,8 @@ import {
   orderBy,
   Timestamp,
   QueryDocumentSnapshot,
-  DocumentData
+  DocumentData,
+  getDoc
 } from "firebase/firestore";
 import { db } from "./firebase";
 
@@ -74,6 +75,25 @@ export const getExportRecords = async (): Promise<ExportRecord[]> => {
     return querySnapshot.docs.map(docToExportRecord);
   } catch (error) {
     console.error("Error getting export records:", error);
+    throw error;
+  }
+};
+
+// Get a single export record by id
+export const getExportRecordById = async (
+  id: string
+): Promise<ExportRecord | null> => {
+  try {
+    const exportRef = doc(db, "exports", id);
+    const docSnapshot = await getDoc(exportRef);
+    if (docSnapshot.exists()) {
+      return docToExportRecord(
+        docSnapshot as QueryDocumentSnapshot<DocumentData>
+      );
+    }
+    return null;
+  } catch (error) {
+    console.error("Error getting export record by id:", error);
     throw error;
   }
 };

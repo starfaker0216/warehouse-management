@@ -5,6 +5,7 @@ import { HistoryItem } from "../../stores/useHistoryStore";
 import { formatDate } from "../../utils/dateUtils";
 import { formatCurrency } from "../../utils/currencyUtils";
 import ImportDetailModal from "./ImportDetailModal";
+import ExportDetailModal from "./ExportDetailModal";
 
 interface HistoryTableProps {
   items: HistoryItem[];
@@ -13,6 +14,7 @@ interface HistoryTableProps {
 
 export default function HistoryTable({ items, warehouses }: HistoryTableProps) {
   const [selectedImportId, setSelectedImportId] = useState<string | null>(null);
+  const [selectedExportId, setSelectedExportId] = useState<string | null>(null);
   const [selectedWarehouseName, setSelectedWarehouseName] = useState<
     string | undefined
   >(undefined);
@@ -24,18 +26,26 @@ export default function HistoryTable({ items, warehouses }: HistoryTableProps) {
   };
 
   const handleRowClick = (item: HistoryItem) => {
+    const warehouseName = item.warehouseId
+      ? warehouses.find((w) => w.id === item.warehouseId)?.name
+      : undefined;
+
     if (item.type === "import") {
       setSelectedImportId(item.id);
-      setSelectedWarehouseName(
-        item.warehouseId
-          ? warehouses.find((w) => w.id === item.warehouseId)?.name
-          : undefined
-      );
+      setSelectedWarehouseName(warehouseName);
+    } else if (item.type === "export") {
+      setSelectedExportId(item.id);
+      setSelectedWarehouseName(warehouseName);
     }
   };
 
-  const handleCloseModal = () => {
+  const handleCloseImportModal = () => {
     setSelectedImportId(null);
+    setSelectedWarehouseName(undefined);
+  };
+
+  const handleCloseExportModal = () => {
+    setSelectedExportId(null);
     setSelectedWarehouseName(undefined);
   };
 
@@ -80,9 +90,7 @@ export default function HistoryTable({ items, warehouses }: HistoryTableProps) {
               <tr
                 key={item.id}
                 onClick={() => handleRowClick(item)}
-                className={`${
-                  item.type === "import" ? "cursor-pointer" : ""
-                } hover:bg-zinc-50 dark:hover:bg-zinc-800/50`}
+                className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
               >
                 <td className="whitespace-nowrap px-4 py-3 text-sm">
                   <span
@@ -161,8 +169,16 @@ export default function HistoryTable({ items, warehouses }: HistoryTableProps) {
       {/* Import Detail Modal */}
       <ImportDetailModal
         isOpen={selectedImportId !== null}
-        onClose={handleCloseModal}
+        onClose={handleCloseImportModal}
         importRecordId={selectedImportId}
+        warehouseName={selectedWarehouseName}
+      />
+
+      {/* Export Detail Modal */}
+      <ExportDetailModal
+        isOpen={selectedExportId !== null}
+        onClose={handleCloseExportModal}
+        exportRecordId={selectedExportId}
         warehouseName={selectedWarehouseName}
       />
     </>
