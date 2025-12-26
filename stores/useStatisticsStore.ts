@@ -26,6 +26,7 @@ interface StatisticsTotals {
   totalExportValue: number;
   totalIncome: number;
   totalExpense: number;
+  totalProfit: number;
 }
 
 interface StatisticsState extends StatisticsTotals {
@@ -151,6 +152,34 @@ const calculateIncomeExpense = (
   return { totalIncome, totalExpense };
 };
 
+const calculateProfit = (
+  phoneExporteds: PhoneExported[],
+  incomeExpenses: IncomeExpenseRecord[],
+  start?: Date | null,
+  end?: Date | null
+): number => {
+  // Tính (tổng giá bán - tổng giá nhập) trên tất cả phoneExporteds trong khoảng thời gian
+  const filteredPhoneExporteds = phoneExporteds.filter((phoneExported) =>
+    isWithinRange(phoneExported.exportedAt, start, end)
+  );
+
+  const phoneProfit = filteredPhoneExporteds.reduce(
+    (sum, phoneExported) =>
+      sum + ((phoneExported.salePrice || 0) - (phoneExported.importPrice || 0)),
+    0
+  );
+
+  // Tính tổng thu - tổng chi
+  const { totalIncome, totalExpense } = calculateIncomeExpense(
+    incomeExpenses,
+    start,
+    end
+  );
+
+  // Tổng lãi = (tổng giá bán - tổng giá nhập) trên phoneExporteds + tổng thu - tổng chi
+  return phoneProfit + totalIncome - totalExpense;
+};
+
 // Helper: Validate employee and warehouse access
 const validateEmployeeAndWarehouse = (
   employee: { role?: string; warehouseId?: string } | null,
@@ -261,13 +290,21 @@ const calculateAllStatistics = async (
       )
     ]);
 
+  const totalProfit = calculateProfit(
+    phoneExporteds,
+    incomeExpenses,
+    startDate,
+    endDate
+  );
+
   return {
     totalRemainingQuantity,
     totalInventoryValue,
     totalImportValue,
     totalExportValue,
     totalIncome,
-    totalExpense
+    totalExpense,
+    totalProfit
   };
 };
 
@@ -309,6 +346,7 @@ export const useStatisticsStore = create<StatisticsState>((set, get) => ({
   totalExportValue: 0,
   totalIncome: 0,
   totalExpense: 0,
+  totalProfit: 0,
 
   resetError: () => set({ error: null }),
 

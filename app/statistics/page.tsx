@@ -21,6 +21,7 @@ export default function StatisticsPage() {
     totalExportValue,
     totalIncome,
     totalExpense,
+    totalProfit,
     loading,
     error,
     startDate,
@@ -151,6 +152,7 @@ export default function StatisticsPage() {
             totalExportValue={totalExportValue}
             totalIncome={totalIncome}
             totalExpense={totalExpense}
+            totalProfit={totalProfit}
           />
         )}
       </div>

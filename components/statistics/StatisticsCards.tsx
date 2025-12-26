@@ -8,6 +8,7 @@ interface StatisticsCardsProps {
   totalExportValue: number;
   totalIncome: number;
   totalExpense: number;
+  totalProfit: number;
 }
 
 export default function StatisticsCards({
@@ -16,7 +17,8 @@ export default function StatisticsCards({
   totalImportValue,
   totalExportValue,
   totalIncome,
-  totalExpense
+  totalExpense,
+  totalProfit
 }: StatisticsCardsProps) {
   return (
     <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -155,6 +157,33 @@ export default function StatisticsCards({
         }
         iconBgColor="bg-red-100 dark:bg-red-900/30"
         valueSize="text-xl"
+      />
+
+      <StatisticsCard
+        title="Tổng Lãi"
+        value={formatCurrency(totalProfit)}
+        icon={
+          <svg
+            className="h-6 w-6 text-indigo-600 dark:text-indigo-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+        }
+        iconBgColor="bg-indigo-100 dark:bg-indigo-900/30"
+        valueSize="text-xl"
+        valueColor={
+          totalProfit >= 0
+            ? "text-green-600 dark:text-green-400"
+            : "text-red-600 dark:text-red-400"
+        }
       />
     </div>
   );
