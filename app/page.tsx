@@ -98,7 +98,7 @@ export default function Home() {
         )}
 
         {/* Content - Only show when not loading and no error */}
-        {!loading && !error && (
+        {!error && (
           <>
             <PhoneList
               listPhoneDetails={listPhoneDetails}

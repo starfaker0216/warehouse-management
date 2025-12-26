@@ -29,6 +29,7 @@ export default function PhoneList({
     currentPage,
     itemsPerPage,
     totalCount,
+    loading,
     setCurrentPage
   } = usePhoneStore();
   const { warehouses, fetchWarehouses } = useWarehouseStore();
@@ -134,20 +135,9 @@ export default function PhoneList({
     );
   }
 
-  return (
-    <>
-      {/* Pagination - Top */}
-      {totalPages > 1 && (
-        <div className="mb-6">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-          />
-        </div>
-      )}
-
-      {/* Desktop Table View */}
+  const renderDesktopView = () => {
+    if (loading) return null;
+    return (
       <div className="hidden md:block">
         <div className="overflow-hidden rounded-lg bg-white shadow-sm dark:bg-zinc-900">
           <div className="overflow-x-auto">
@@ -252,8 +242,12 @@ export default function PhoneList({
           </div>
         </div>
       </div>
+    );
+  };
 
-      {/* Mobile Card View */}
+  const renderMobileView = () => {
+    if (loading) return null;
+    return (
       <div className="md:hidden space-y-4">
         {paginatedListPhoneDetails.map((phoneDetail) => (
           <div
@@ -331,6 +325,23 @@ export default function PhoneList({
           </div>
         ))}
       </div>
+    );
+  };
+
+  return (
+    <>
+      {/* Pagination - Top */}
+      {totalPages > 1 && (
+        <div className="mb-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
+        </div>
+      )}
+      {renderDesktopView()}
+      {renderMobileView()}
 
       {/* Edit Modal */}
       <EditPhoneDetailModal
