@@ -8,6 +8,9 @@ import {
   deleteDoc,
   query,
   orderBy,
+  where,
+  limit,
+  startAfter,
   Timestamp,
   QueryDocumentSnapshot,
   DocumentData
@@ -62,6 +65,144 @@ export const getImportRecords = async (): Promise<ImportRecord[]> => {
     return querySnapshot.docs.map(docToImportRecord);
   } catch (error) {
     console.error("Error getting import records:", error);
+    throw error;
+  }
+};
+
+// Get count of import records with filters
+export const getImportRecordsCount = async (filters: {
+  warehouseId?: string | null;
+  startDate?: Date | null;
+  endDate?: Date | null;
+}): Promise<number> => {
+  try {
+    const importsRef = collection(db, "imports");
+    let q = query(importsRef, orderBy("importDate", "desc"));
+
+    // Apply warehouse filter
+    if (filters.warehouseId) {
+      q = query(q, where("warehouseId", "==", filters.warehouseId));
+    }
+
+    // Apply date filters
+    if (filters.startDate) {
+      const startTimestamp = Timestamp.fromDate(filters.startDate);
+      q = query(q, where("importDate", ">=", startTimestamp));
+    }
+
+    if (filters.endDate) {
+      const endOfDay = new Date(filters.endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      const endTimestamp = Timestamp.fromDate(endOfDay);
+      q = query(q, where("importDate", "<=", endTimestamp));
+    }
+
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.length;
+  } catch (error) {
+    console.error("Error getting import records count:", error);
+    throw error;
+  }
+};
+
+// Get import records with limit (for merging with exports)
+export const getImportRecordsWithLimit = async (
+  filters: {
+    warehouseId?: string | null;
+    startDate?: Date | null;
+    endDate?: Date | null;
+  },
+  limitCount: number
+): Promise<ImportRecord[]> => {
+  try {
+    const importsRef = collection(db, "imports");
+    let q = query(importsRef, orderBy("importDate", "desc"));
+
+    // Apply warehouse filter
+    if (filters.warehouseId) {
+      q = query(q, where("warehouseId", "==", filters.warehouseId));
+    }
+
+    // Apply date filters
+    if (filters.startDate) {
+      const startTimestamp = Timestamp.fromDate(filters.startDate);
+      q = query(q, where("importDate", ">=", startTimestamp));
+    }
+
+    if (filters.endDate) {
+      const endOfDay = new Date(filters.endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      const endTimestamp = Timestamp.fromDate(endOfDay);
+      q = query(q, where("importDate", "<=", endTimestamp));
+    }
+
+    // Apply limit
+    q = query(q, limit(limitCount));
+
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(docToImportRecord);
+  } catch (error) {
+    console.error("Error getting import records with limit:", error);
+    throw error;
+  }
+};
+
+// Get import records with filters and pagination
+export const getImportRecordsPaginated = async (
+  filters: {
+    warehouseId?: string | null;
+    startDate?: Date | null;
+    endDate?: Date | null;
+  },
+  page: number = 1,
+  itemsPerPage: number = 20
+): Promise<{
+  records: ImportRecord[];
+  totalCount: number;
+  hasMore: boolean;
+}> => {
+  try {
+    const importsRef = collection(db, "imports");
+    let q = query(importsRef, orderBy("importDate", "desc"));
+
+    // Apply warehouse filter
+    if (filters.warehouseId) {
+      q = query(q, where("warehouseId", "==", filters.warehouseId));
+    }
+
+    // Apply date filters
+    if (filters.startDate) {
+      const startTimestamp = Timestamp.fromDate(filters.startDate);
+      q = query(q, where("importDate", ">=", startTimestamp));
+    }
+
+    if (filters.endDate) {
+      const endOfDay = new Date(filters.endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      const endTimestamp = Timestamp.fromDate(endOfDay);
+      q = query(q, where("importDate", "<=", endTimestamp));
+    }
+
+    // Get total count (first query without limit)
+    const countSnapshot = await getDocs(q);
+    const totalCount = countSnapshot.docs.length;
+
+    // Apply pagination
+    const startIndex = (page - 1) * itemsPerPage;
+    if (startIndex > 0 && countSnapshot.docs.length > startIndex) {
+      const startAfterDoc = countSnapshot.docs[startIndex - 1];
+      q = query(q, startAfter(startAfterDoc), limit(itemsPerPage));
+    } else {
+      q = query(q, limit(itemsPerPage));
+    }
+
+    const querySnapshot = await getDocs(q);
+    const records = querySnapshot.docs.map(docToImportRecord);
+    const hasMore = startIndex + records.length < totalCount;
+
+    return { records, totalCount, hasMore };
+  } catch (error) {
+    console.error("Error getting paginated import records:", error);
     throw error;
   }
 };

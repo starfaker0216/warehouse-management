@@ -6,6 +6,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import Loading from "../../components/common/Loading";
 import HistoryFilter from "../../components/history/HistoryFilter";
 import HistoryTable from "../../components/history/HistoryTable";
+import Pagination from "../../components/history/Pagination";
 import { useHistoryStore } from "../../stores/useHistoryStore";
 import { useWarehouseStore } from "../../stores/useWarehouseStore";
 import { formatDate } from "../../utils/dateUtils";
@@ -23,14 +24,18 @@ export default function HistoryPage() {
     endDateInput,
     selectedWarehouseId,
     selectedType,
+    currentPage,
+    totalCount,
     setStartDateInput,
     setEndDateInput,
     setSelectedWarehouseId,
     setSelectedType,
+    setCurrentPage,
     fetchHistory,
     applyFilter,
     clearFilter,
-    resetError
+    resetError,
+    getTotalPages
   } = useHistoryStore();
   const { warehouses, fetchWarehouses } = useWarehouseStore();
 
@@ -149,7 +154,34 @@ export default function HistoryPage() {
         {loading ? (
           <Loading message="Đang tải lịch sử..." />
         ) : (
-          <HistoryTable items={historyItems} warehouses={warehouses} />
+          <>
+            <div className="mb-6">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={getTotalPages()}
+                onPageChange={(page) => {
+                  setCurrentPage(page);
+                  fetchHistory();
+                }}
+              />
+            </div>
+            <HistoryTable items={historyItems} warehouses={warehouses} />
+            {historyItems.length > 10 && (
+              <div className="mt-6">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={getTotalPages()}
+                  onPageChange={(page) => {
+                    setCurrentPage(page);
+                    fetchHistory();
+                  }}
+                />
+              </div>
+            )}
+            <div className="mt-4 text-center text-sm text-zinc-600 dark:text-zinc-400">
+              Hiển thị {historyItems.length} / {totalCount} bản ghi
+            </div>
+          </>
         )}
       </div>
     </div>

@@ -7,6 +7,9 @@ import {
   deleteDoc,
   query,
   orderBy,
+  where,
+  limit,
+  startAfter,
   Timestamp,
   QueryDocumentSnapshot,
   DocumentData,
@@ -75,6 +78,144 @@ export const getExportRecords = async (): Promise<ExportRecord[]> => {
     return querySnapshot.docs.map(docToExportRecord);
   } catch (error) {
     console.error("Error getting export records:", error);
+    throw error;
+  }
+};
+
+// Get count of export records with filters
+export const getExportRecordsCount = async (filters: {
+  warehouseId?: string | null;
+  startDate?: Date | null;
+  endDate?: Date | null;
+}): Promise<number> => {
+  try {
+    const exportsRef = collection(db, "exports");
+    let q = query(exportsRef, orderBy("createdAt", "desc"));
+
+    // Apply warehouse filter
+    if (filters.warehouseId) {
+      q = query(q, where("warehouseId", "==", filters.warehouseId));
+    }
+
+    // Apply date filters
+    if (filters.startDate) {
+      const startTimestamp = Timestamp.fromDate(filters.startDate);
+      q = query(q, where("createdAt", ">=", startTimestamp));
+    }
+
+    if (filters.endDate) {
+      const endOfDay = new Date(filters.endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      const endTimestamp = Timestamp.fromDate(endOfDay);
+      q = query(q, where("createdAt", "<=", endTimestamp));
+    }
+
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.length;
+  } catch (error) {
+    console.error("Error getting export records count:", error);
+    throw error;
+  }
+};
+
+// Get export records with limit (for merging with imports)
+export const getExportRecordsWithLimit = async (
+  filters: {
+    warehouseId?: string | null;
+    startDate?: Date | null;
+    endDate?: Date | null;
+  },
+  limitCount: number
+): Promise<ExportRecord[]> => {
+  try {
+    const exportsRef = collection(db, "exports");
+    let q = query(exportsRef, orderBy("createdAt", "desc"));
+
+    // Apply warehouse filter
+    if (filters.warehouseId) {
+      q = query(q, where("warehouseId", "==", filters.warehouseId));
+    }
+
+    // Apply date filters
+    if (filters.startDate) {
+      const startTimestamp = Timestamp.fromDate(filters.startDate);
+      q = query(q, where("createdAt", ">=", startTimestamp));
+    }
+
+    if (filters.endDate) {
+      const endOfDay = new Date(filters.endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      const endTimestamp = Timestamp.fromDate(endOfDay);
+      q = query(q, where("createdAt", "<=", endTimestamp));
+    }
+
+    // Apply limit
+    q = query(q, limit(limitCount));
+
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(docToExportRecord);
+  } catch (error) {
+    console.error("Error getting export records with limit:", error);
+    throw error;
+  }
+};
+
+// Get export records with filters and pagination
+export const getExportRecordsPaginated = async (
+  filters: {
+    warehouseId?: string | null;
+    startDate?: Date | null;
+    endDate?: Date | null;
+  },
+  page: number = 1,
+  itemsPerPage: number = 20
+): Promise<{
+  records: ExportRecord[];
+  totalCount: number;
+  hasMore: boolean;
+}> => {
+  try {
+    const exportsRef = collection(db, "exports");
+    let q = query(exportsRef, orderBy("createdAt", "desc"));
+
+    // Apply warehouse filter
+    if (filters.warehouseId) {
+      q = query(q, where("warehouseId", "==", filters.warehouseId));
+    }
+
+    // Apply date filters
+    if (filters.startDate) {
+      const startTimestamp = Timestamp.fromDate(filters.startDate);
+      q = query(q, where("createdAt", ">=", startTimestamp));
+    }
+
+    if (filters.endDate) {
+      const endOfDay = new Date(filters.endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      const endTimestamp = Timestamp.fromDate(endOfDay);
+      q = query(q, where("createdAt", "<=", endTimestamp));
+    }
+
+    // Get total count (first query without limit)
+    const countSnapshot = await getDocs(q);
+    const totalCount = countSnapshot.docs.length;
+
+    // Apply pagination
+    const startIndex = (page - 1) * itemsPerPage;
+    if (startIndex > 0 && countSnapshot.docs.length > startIndex) {
+      const startAfterDoc = countSnapshot.docs[startIndex - 1];
+      q = query(q, startAfter(startAfterDoc), limit(itemsPerPage));
+    } else {
+      q = query(q, limit(itemsPerPage));
+    }
+
+    const querySnapshot = await getDocs(q);
+    const records = querySnapshot.docs.map(docToExportRecord);
+    const hasMore = startIndex + records.length < totalCount;
+
+    return { records, totalCount, hasMore };
+  } catch (error) {
+    console.error("Error getting paginated export records:", error);
     throw error;
   }
 };
