@@ -2,6 +2,8 @@ import {
   collection,
   getDocs,
   addDoc,
+  updateDoc,
+  doc,
   query,
   where,
   Timestamp,
@@ -141,6 +143,43 @@ export const getPhoneExportedsByWarehouseId = async (
     return querySnapshot.docs.map(docToPhoneExported);
   } catch (error) {
     console.error("Error getting phone exporteds by warehouseId:", error);
+    throw error;
+  }
+};
+
+// Update phone exported by exportRecordId
+export const updatePhoneExportedByExportRecordId = async (
+  exportRecordId: string,
+  updateData: {
+    customerPhone?: string;
+    customerName?: string;
+    salePrice?: number;
+  }
+): Promise<void> => {
+  try {
+    const phoneExportedsRef = collection(db, "phoneExporteds");
+    const q = query(
+      phoneExportedsRef,
+      where("exportRecordId", "==", exportRecordId)
+    );
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      console.warn(
+        `No phoneExported found for exportRecordId: ${exportRecordId}`
+      );
+      return;
+    }
+
+    // Update all phoneExporteds with this exportRecordId
+    const updatePromises = querySnapshot.docs.map((docSnapshot) => {
+      const phoneExportedRef = doc(db, "phoneExporteds", docSnapshot.id);
+      return updateDoc(phoneExportedRef, updateData);
+    });
+
+    await Promise.all(updatePromises);
+  } catch (error) {
+    console.error("Error updating phone exported by exportRecordId:", error);
     throw error;
   }
 };

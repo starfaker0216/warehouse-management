@@ -4,6 +4,7 @@ import {
   getExportRecordById,
   updateExportRecord
 } from "../lib/exportService";
+import { updatePhoneExportedByExportRecordId } from "../lib/phoneExportedService";
 import { formatCurrencyInput } from "../utils/currencyUtils";
 import toast from "react-hot-toast";
 
@@ -158,6 +159,7 @@ export const useExportDetailModalStore = create<ExportDetailModalState>(
       set({ saving: true, error: null });
 
       try {
+        // Update export record
         await updateExportRecord(exportRecordId, {
           customerPhone: editFormData.customerPhone,
           customerName: editFormData.customerName,
@@ -168,6 +170,13 @@ export const useExportDetailModalStore = create<ExportDetailModalState>(
           bankTransfer: editFormData.bankTransfer,
           cashPayment: editFormData.cashPayment,
           otherPayment: editFormData.otherPayment
+        });
+
+        // Update corresponding phoneExported records
+        await updatePhoneExportedByExportRecordId(exportRecordId, {
+          customerPhone: editFormData.customerPhone,
+          customerName: editFormData.customerName,
+          salePrice: editFormData.salePrice
         });
 
         const updatedRecord = await getExportRecordById(exportRecordId);
