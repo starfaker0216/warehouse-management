@@ -18,7 +18,20 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Tý Táo Store",
   description:
-    "Hệ thống quản lý và thống kê kho hàng điện thoại của Tý Táo Store"
+    "Hệ thống quản lý và thống kê kho hàng điện thoại của Tý Táo Store",
+  manifest: "/manifest.json",
+  themeColor: "#000000",
+  icons: {
+    icon: "/favicon.ico",
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }
+    ]
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Tý Táo Store"
+  }
 };
 
 export default function RootLayout({
