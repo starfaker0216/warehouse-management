@@ -67,33 +67,6 @@ const docToPhoneDetail = (
   };
 };
 
-// Get all phone details
-export const getPhoneDetails = async (): Promise<PhoneDetail[]> => {
-  try {
-    const phoneDetailsRef = collection(db, "phoneDetails");
-    const querySnapshot = await getDocs(phoneDetailsRef);
-    return querySnapshot.docs.map(docToPhoneDetail);
-  } catch (error) {
-    console.error("Error getting phone details:", error);
-    throw error;
-  }
-};
-
-// Get phone details by phoneId
-export const getPhoneDetailsByPhoneId = async (
-  phoneId: string
-): Promise<PhoneDetail[]> => {
-  try {
-    const phoneDetailsRef = collection(db, "phoneDetails");
-    const q = query(phoneDetailsRef, where("phoneId", "==", phoneId));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(docToPhoneDetail);
-  } catch (error) {
-    console.error("Error getting phone details by phoneId:", error);
-    throw error;
-  }
-};
-
 // Get phone details by warehouseId
 export const getPhoneDetailsByWarehouseId = async (
   warehouseId: string
@@ -137,31 +110,6 @@ export const getPhoneDetail = async (
     return null;
   } catch (error) {
     console.error("Error getting phone detail:", error);
-    throw error;
-  }
-};
-
-// Add a new phone detail
-export const addPhoneDetail = async (
-  phoneDetailData: Omit<PhoneDetail, "id" | "createdAt" | "updatedAt">
-): Promise<string> => {
-  try {
-    const phoneDetailsRef = collection(db, "phoneDetails");
-    const newPhoneDetail: Record<string, unknown> = {
-      ...phoneDetailData,
-      createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now()
-    };
-    // Convert importDate to Timestamp if it exists
-    if (phoneDetailData.importDate) {
-      newPhoneDetail.importDate = Timestamp.fromDate(
-        phoneDetailData.importDate
-      );
-    }
-    const docRef = await addDoc(phoneDetailsRef, newPhoneDetail);
-    return docRef.id;
-  } catch (error) {
-    console.error("Error adding phone detail:", error);
     throw error;
   }
 };
