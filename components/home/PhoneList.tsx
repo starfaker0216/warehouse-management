@@ -9,7 +9,10 @@ import { usePhoneStore } from "../../stores/usePhoneStore";
 import { useWarehouseStore } from "../../stores/useWarehouseStore";
 import EditPhoneDetailModal from "./EditPhoneDetailModal";
 import ImportDetailModal from "../history/ImportDetailModal";
+import ExportDetailModal from "../history/ExportDetailModal";
 import Pagination from "../history/Pagination";
+import { getStatusText, getStatusColor } from "../history/phoneStatusUtils";
+import { PhoneStatus } from "../history/types";
 
 interface PhoneListProps {
   listPhoneDetails: PhoneDetail[];
@@ -41,6 +44,10 @@ export default function PhoneList({
   const [selectedWarehouseName, setSelectedWarehouseName] = useState<
     string | undefined
   >(undefined);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [selectedExportRecordId, setSelectedExportRecordId] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     fetchWarehouses();
@@ -56,6 +63,14 @@ export default function PhoneList({
   // listPhoneDetails is already paginated from server, use it directly
   const paginatedListPhoneDetails = listPhoneDetails;
 
+  // Helper: Get phone status from phoneDetail
+  const getPhoneStatus = (phoneDetail: PhoneDetail): PhoneStatus => {
+    if (phoneDetail.isExported) {
+      return "exported";
+    }
+    return "in_warehouse";
+  };
+
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -65,6 +80,19 @@ export default function PhoneList({
 
   const handleEditClick = (phoneDetail: PhoneDetail, e: React.MouseEvent) => {
     e.stopPropagation();
+
+    // If phone is exported, open ExportDetailModal
+    if (phoneDetail.isExported && phoneDetail.exportRecordId) {
+      setSelectedExportRecordId(phoneDetail.exportRecordId);
+      const warehouse = warehouses.find(
+        (w) => w.id === phoneDetail.warehouseId
+      );
+      setSelectedWarehouseName(warehouse?.name);
+      setIsExportModalOpen(true);
+      return;
+    }
+
+    // Otherwise, open EditPhoneDetailModal
     setSelectedPhoneDetail(phoneDetail);
     setIsEditModalOpen(true);
   };
@@ -113,9 +141,20 @@ export default function PhoneList({
     setSelectedWarehouseName(undefined);
   };
 
+  const handleCloseExportModal = () => {
+    setIsExportModalOpen(false);
+    setSelectedExportRecordId(null);
+    setSelectedWarehouseName(undefined);
+  };
+
   const handleItemClick = (phoneDetail: PhoneDetail, e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     if (target.closest("button")) {
+      return;
+    }
+
+    // Don't allow export for already exported items
+    if (phoneDetail.isExported) {
       return;
     }
 
@@ -171,11 +210,24 @@ export default function PhoneList({
                   <tr
                     key={phoneDetail.id}
                     onClick={(e) => handleItemClick(phoneDetail, e)}
-                    className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                    className={`${
+                      phoneDetail.isExported
+                        ? "cursor-not-allowed"
+                        : "cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                    }`}
                   >
-                    <td className="whitespace-nowrap px-6 py-4">
-                      <div className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
-                        {phoneDetail.name || "Chưa có tên"}
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-1">
+                        <div className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                          {phoneDetail.name || "Chưa có tên"}
+                        </div>
+                        <span
+                          className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(
+                            getPhoneStatus(phoneDetail)
+                          )}`}
+                        >
+                          {getStatusText(getPhoneStatus(phoneDetail))}
+                        </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-zinc-900 dark:text-zinc-50">
@@ -253,15 +305,28 @@ export default function PhoneList({
           <div
             key={phoneDetail.id}
             onClick={(e) => handleItemClick(phoneDetail, e)}
-            className="cursor-pointer overflow-hidden rounded-lg bg-white shadow-sm transition-shadow hover:shadow-md dark:bg-zinc-900"
+            className={`overflow-hidden rounded-lg bg-white shadow-sm transition-shadow dark:bg-zinc-900 ${
+              phoneDetail.isExported
+                ? "cursor-not-allowed"
+                : "cursor-pointer hover:shadow-md"
+            }`}
           >
             <div className="p-4">
               {/* Header: Name */}
               <div className="mb-3 flex items-start justify-between">
                 <div className="flex-1">
-                  <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
-                    {phoneDetail.name}
-                  </h3>
+                  <div className="flex flex-col gap-1">
+                    <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+                      {phoneDetail.name}
+                    </h3>
+                    <span
+                      className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(
+                        getPhoneStatus(phoneDetail)
+                      )}`}
+                    >
+                      {getStatusText(getPhoneStatus(phoneDetail))}
+                    </span>
+                  </div>
                 </div>
                 {isAdmin && (
                   <div className="ml-2 flex flex-col gap-2">
@@ -357,6 +422,14 @@ export default function PhoneList({
         isOpen={isImportModalOpen}
         onClose={handleCloseImportModal}
         importRecordId={selectedImportId}
+        warehouseName={selectedWarehouseName}
+      />
+
+      {/* Export Detail Modal */}
+      <ExportDetailModal
+        isOpen={isExportModalOpen}
+        onClose={handleCloseExportModal}
+        exportRecordId={selectedExportRecordId}
         warehouseName={selectedWarehouseName}
       />
 

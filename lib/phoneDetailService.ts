@@ -17,6 +17,7 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { getPhone, Phone, getPhones } from "./phoneService";
+import { PhoneExported } from "./phoneExportedService";
 
 export interface PhoneDetail {
   id: string;
@@ -37,6 +38,8 @@ export interface PhoneDetail {
   importDate?: Date; // ngày nhập hàng
   // Optional fields populated when joining with phones collection
   name?: string; // Phone name from phones collection
+  isExported?: boolean; // Flag to indicate if this item is from phoneExporteds collection
+  exportRecordId?: string; // ID of export record if exported
 }
 
 // Convert Firestore document to PhoneDetail object
@@ -570,6 +573,118 @@ const handleNoSearchTerm = async (
   };
 };
 
+// Helper: Convert PhoneExported to PhoneDetail format
+const convertPhoneExportedToPhoneDetail = (
+  phoneExported: PhoneExported
+): PhoneDetail => {
+  return {
+    id: phoneExported.phoneDetailId || phoneExported.id,
+    phoneId: phoneExported.phoneId,
+    warehouseId: phoneExported.warehouseId,
+    color: phoneExported.color,
+    imei: phoneExported.imei,
+    importPrice: phoneExported.importPrice,
+    salePrice: phoneExported.salePrice,
+    status: phoneExported.status,
+    updatedBy: phoneExported.updatedBy,
+    createdAt: phoneExported.originalCreatedAt,
+    updatedAt: phoneExported.originalUpdatedAt,
+    importId: phoneExported.importId,
+    importDate: phoneExported.importDate,
+    name: phoneExported.phoneName,
+    isExported: true,
+    exportRecordId: phoneExported.exportRecordId
+  };
+};
+
+// Helper: Search phoneExporteds by IMEI
+const searchPhoneExportedsByImei = async (
+  warehouseId: string,
+  searchTerm: string
+): Promise<PhoneExported[]> => {
+  try {
+    const phoneExportedsRef = collection(db, "phoneExporteds");
+    const trimmedSearchTerm = searchTerm.trim();
+
+    const exactQuery = query(
+      phoneExportedsRef,
+      where("warehouseId", "==", warehouseId),
+      where("imei", "==", trimmedSearchTerm)
+    );
+
+    try {
+      const exactSnapshot = await getDocs(exactQuery);
+      if (exactSnapshot.docs.length > 0) {
+        return exactSnapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            phoneDetailId: data.phoneDetailId || "",
+            exportRecordId: data.exportRecordId || "",
+            phoneId: data.phoneId || "",
+            warehouseId: data.warehouseId || "",
+            color: data.color || "",
+            imei: data.imei || "",
+            importPrice: data.importPrice || 0,
+            salePrice: data.salePrice || 0,
+            status: data.status || "",
+            updatedBy: data.updatedBy || {
+              employeeId: "",
+              employeeName: ""
+            },
+            customerPhone: data.customerPhone || "",
+            customerName: data.customerName || "",
+            phoneName: data.phoneName || undefined,
+            originalCreatedAt: data.originalCreatedAt?.toDate(),
+            originalUpdatedAt: data.originalUpdatedAt?.toDate(),
+            exportedAt: data.exportedAt?.toDate() || new Date(),
+            importId: data.importId || undefined,
+            importDate: data.importDate?.toDate()
+          } as PhoneExported;
+        });
+      }
+    } catch (error) {
+      console.log("Exact IMEI match query failed:", error);
+    }
+
+    return [];
+  } catch (error) {
+    console.error("Error searching phone exporteds by IMEI:", error);
+    return [];
+  }
+};
+
+const handleImeiSearchExported = async (
+  warehouseId: string,
+  trimmedSearchTerm: string
+): Promise<{
+  phoneDetails: PhoneDetail[];
+  totalCount: number;
+} | null> => {
+  const imeiExporteds = await searchPhoneExportedsByImei(
+    warehouseId,
+    trimmedSearchTerm
+  );
+  if (imeiExporteds.length > 0) {
+    // Convert phoneExporteds to PhoneDetail format
+    const exportedAsPhoneDetails = imeiExporteds.map(
+      convertPhoneExportedToPhoneDetail
+    );
+
+    // Enrich exported phone details with phone names if needed
+    const enrichedExported = await processAndEnrichPhoneDetails(
+      exportedAsPhoneDetails
+    );
+
+    return {
+      phoneDetails: enrichedExported,
+      totalCount: enrichedExported.length
+    };
+  }
+
+  return null;
+};
+
 // Get list of phoneDetails with phone name populated - each phoneDetail is a separate row
 export const getListPhoneDetails = async (
   warehouseId: string,
@@ -585,13 +700,22 @@ export const getListPhoneDetails = async (
     if (searchTerm && searchTerm.trim()) {
       const trimmedSearchTerm = searchTerm.trim();
 
-      // Step 1: Search by IMEI first (returns immediately if found)
+      // Step 1: Search by IMEI in phoneDetails (returns immediately if found)
       const imeiResult = await handleImeiSearch(warehouseId, trimmedSearchTerm);
       if (imeiResult) {
         return imeiResult;
       }
 
-      // Step 2: If IMEI search has no results, search by phone name
+      // Step 2: Search by IMEI in phoneExporteds, if found then convert and return
+      const imeiExportedResult = await handleImeiSearchExported(
+        warehouseId,
+        trimmedSearchTerm
+      );
+      if (imeiExportedResult) {
+        return imeiExportedResult;
+      }
+
+      // Step 3: If no IMEI found, search by phone name in phoneDetails only
       return await handlePhoneNameSearch(
         warehouseId,
         trimmedSearchTerm,
