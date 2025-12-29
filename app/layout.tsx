@@ -16,8 +16,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Thống Kê Kho Hàng Điện Thoại",
-  description: "Hệ thống quản lý và thống kê kho hàng điện thoại"
+  title: "Tý Táo Store",
+  description:
+    "Hệ thống quản lý và thống kê kho hàng điện thoại của Tý Táo Store"
 };
 
 export default function RootLayout({
