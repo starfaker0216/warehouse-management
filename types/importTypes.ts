@@ -14,4 +14,5 @@ export interface ImportFormData {
   items: ImportItem[];
   supplier: string;
   note: string;
+  warehouseId?: string;
 }

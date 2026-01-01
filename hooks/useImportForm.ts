@@ -49,6 +49,19 @@ export function useImportForm() {
     fetchWarehouses
   ]);
 
+  // Initialize warehouseId from employee when available
+  useEffect(() => {
+    if (
+      employee?.warehouseId &&
+      !importFormStore.formData.warehouseId &&
+      warehouses.length > 0
+    ) {
+      importFormStore.setFormData({
+        warehouseId: employee.warehouseId
+      });
+    }
+  }, [employee?.warehouseId, warehouses.length, importFormStore]);
+
   const handlePhoneSelect = (phone: Phone) => {
     importFormStore.handlePhoneSelect(phone.id, phone.name);
   };
@@ -64,11 +77,6 @@ export function useImportForm() {
     }
   };
 
-  // Get warehouse name from employee's warehouseId
-  const warehouseName = employee?.warehouseId
-    ? warehouses.find((w) => w.id === employee.warehouseId)?.name || ""
-    : "";
-
   return {
     // Form data
     formData: importFormStore.formData,
@@ -78,7 +86,7 @@ export function useImportForm() {
     phones,
     colors,
     suppliers,
-    warehouseName,
+    warehouses,
 
     // New item states
     newColor: importFormStore.newColor,

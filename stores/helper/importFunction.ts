@@ -39,6 +39,12 @@ export const validateFormData = (
     return false;
   }
 
+  if (!formData.warehouseId || !formData.warehouseId.trim()) {
+    toast.error("Vui lòng chọn kho!");
+    setLoading(false);
+    return false;
+  }
+
   return true;
 };
 

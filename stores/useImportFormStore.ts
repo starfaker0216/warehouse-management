@@ -9,16 +9,21 @@ import {
   createPhoneDetails
 } from "./helper/importFunction";
 import { updatePhoneDetail } from "../lib/phoneDetailService";
+import { useAuthStore } from "./useAuthStore";
 import toast from "react-hot-toast";
 
-const initialFormData: ImportFormData = {
-  phoneId: "",
-  importDate: new Date(),
-  phoneType: "",
-  quantity: 0,
-  items: [],
-  supplier: "",
-  note: ""
+const getInitialFormData = (): ImportFormData => {
+  const employee = useAuthStore.getState().employee;
+  return {
+    phoneId: "",
+    importDate: new Date(),
+    phoneType: "",
+    quantity: 0,
+    items: [],
+    supplier: "",
+    note: "",
+    warehouseId: employee?.warehouseId || ""
+  };
 };
 
 interface ImportFormState {
@@ -54,7 +59,7 @@ interface ImportFormState {
 }
 
 export const useImportFormStore = create<ImportFormState>((set, get) => ({
-  formData: initialFormData,
+  formData: getInitialFormData(),
   newColor: "",
   newSupplier: "",
   showAddColor: false,
@@ -123,7 +128,7 @@ export const useImportFormStore = create<ImportFormState>((set, get) => ({
 
   resetForm: () => {
     set({
-      formData: initialFormData,
+      formData: getInitialFormData(),
       priceInputValue: "",
       dateInputValue: "",
       showAddColor: false,
@@ -164,10 +169,13 @@ export const useImportFormStore = create<ImportFormState>((set, get) => ({
       }
 
       // Get employee info
-      const { employeeId, employeeName, warehouseId } = getEmployeeInfo();
+      const { employeeId, employeeName } = getEmployeeInfo();
+
+      // Use warehouseId from formData
+      const warehouseId = state.formData.warehouseId;
 
       if (!warehouseId) {
-        toast.error("Không tìm thấy thông tin kho!");
+        toast.error("Vui lòng chọn kho!");
         set({ loading: false });
         return;
       }
