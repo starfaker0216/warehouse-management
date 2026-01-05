@@ -163,6 +163,39 @@ export const updatePhoneDetail = async (
   }
 };
 
+// Update phone detail warehouseId by importId
+export const updatePhoneDetailWarehouseIdByImportId = async (
+  importId: string,
+  warehouseId: string
+): Promise<void> => {
+  try {
+    const phoneDetailsRef = collection(db, "phoneDetails");
+    const q = query(phoneDetailsRef, where("importId", "==", importId));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      return;
+    }
+
+    // Update all phoneDetails with this importId
+    const updatePromises = querySnapshot.docs.map((docSnapshot) => {
+      const phoneDetailRef = doc(db, "phoneDetails", docSnapshot.id);
+      return updateDoc(phoneDetailRef, {
+        warehouseId,
+        updatedAt: Timestamp.now()
+      });
+    });
+
+    await Promise.all(updatePromises);
+  } catch (error) {
+    console.error(
+      "Error updating phone detail warehouseId by importId:",
+      error
+    );
+    throw error;
+  }
+};
+
 // Delete a phone detail
 export const deletePhoneDetail = async (id: string): Promise<void> => {
   try {

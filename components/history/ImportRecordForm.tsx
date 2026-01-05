@@ -1,7 +1,9 @@
 import { ImportRecord } from "../../lib/importService";
+import { Warehouse } from "../../lib/warehouseService";
 import { formatDate } from "../../utils/dateUtils";
 import DateInputField from "../import/DateInputField";
 import SupplierSelectorField from "../import/SupplierSelectorField";
+import WarehouseSelectorField from "../import/WarehouseSelectorField";
 
 interface ImportRecordFormProps {
   importRecord: ImportRecord;
@@ -9,12 +11,14 @@ interface ImportRecordFormProps {
     importDate: Date;
     supplier: string;
     note: string;
+    warehouseId?: string;
   };
   dateInputValue: string;
   isDateFocused: boolean;
   suppliers: string[];
   newSupplier: string;
   showAddSupplier: boolean;
+  warehouses: Warehouse[];
   warehouseName?: string;
   isEditing: boolean;
   onDateChange: (date: Date) => void;
@@ -23,6 +27,7 @@ interface ImportRecordFormProps {
   onSupplierChange: (supplier: string) => void;
   onNewSupplierChange: (value: string) => void;
   onShowAddSupplier: (show: boolean) => void;
+  onWarehouseChange: (warehouseId: string) => void;
   onNoteChange: (note: string) => void;
 }
 
@@ -34,6 +39,7 @@ export default function ImportRecordForm({
   suppliers,
   newSupplier,
   showAddSupplier,
+  warehouses,
   warehouseName,
   isEditing,
   onDateChange,
@@ -42,6 +48,7 @@ export default function ImportRecordForm({
   onSupplierChange,
   onNewSupplierChange,
   onShowAddSupplier,
+  onWarehouseChange,
   onNoteChange
 }: ImportRecordFormProps) {
   if (isEditing) {
@@ -103,19 +110,11 @@ export default function ImportRecordForm({
             />
           </div>
 
-          {warehouseName && (
-            <div>
-              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Kho
-              </label>
-              <input
-                type="text"
-                value={warehouseName}
-                disabled
-                className="mt-1 w-full rounded-lg border border-zinc-300 bg-zinc-50 px-4 py-2 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 cursor-not-allowed"
-              />
-            </div>
-          )}
+          <WarehouseSelectorField
+            warehouses={warehouses}
+            selectedWarehouseId={editFormData.warehouseId || ""}
+            onWarehouseChange={onWarehouseChange}
+          />
         </div>
 
         <div>

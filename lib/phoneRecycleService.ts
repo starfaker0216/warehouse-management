@@ -1,4 +1,13 @@
-import { addDoc, collection, Timestamp } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  Timestamp,
+  query,
+  where,
+  getDocs,
+  updateDoc,
+  doc
+} from "firebase/firestore";
 import { db } from "./firebase";
 import { PhoneDetail, deletePhoneDetail } from "./phoneDetailService";
 
@@ -37,4 +46,34 @@ export const recyclePhoneDetail = async (
 
   await addDoc(collection(db, "phoneRecycles"), recyclePayload);
   await deletePhoneDetail(phoneDetail.id);
+};
+
+// Update phone recycle warehouseId by importId
+export const updatePhoneRecycleWarehouseIdByImportId = async (
+  importId: string,
+  warehouseId: string
+): Promise<void> => {
+  try {
+    const phoneRecyclesRef = collection(db, "phoneRecycles");
+    const q = query(phoneRecyclesRef, where("importId", "==", importId));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      return;
+    }
+
+    // Update all phoneRecycles with this importId
+    const updatePromises = querySnapshot.docs.map((docSnapshot) => {
+      const phoneRecycleRef = doc(db, "phoneRecycles", docSnapshot.id);
+      return updateDoc(phoneRecycleRef, { warehouseId });
+    });
+
+    await Promise.all(updatePromises);
+  } catch (error) {
+    console.error(
+      "Error updating phone recycle warehouseId by importId:",
+      error
+    );
+    throw error;
+  }
 };

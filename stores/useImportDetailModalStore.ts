@@ -9,11 +9,14 @@ import { getSuppliers } from "../lib/configService";
 import toast from "react-hot-toast";
 import { PhoneDetailWithStatus } from "../components/history/types";
 import { loadPhoneDetailsWithStatus } from "../components/history/phoneDetailLoader";
+import { updatePhoneDetailWarehouseIdByImportId } from "../lib/phoneDetailService";
+import { updatePhoneRecycleWarehouseIdByImportId } from "../lib/phoneRecycleService";
 
 interface EditFormData {
   importDate: Date;
   supplier: string;
   note: string;
+  warehouseId?: string;
 }
 
 interface ImportDetailModalState {
@@ -102,7 +105,8 @@ export const useImportDetailModalStore = create<ImportDetailModalState>(
         editFormData: {
           importDate: record.importDate,
           supplier: record.supplier,
-          note: record.note
+          note: record.note,
+          warehouseId: record.warehouseId
         },
         dateInputValue: formatDate(record.importDate)
       });
@@ -153,17 +157,42 @@ export const useImportDetailModalStore = create<ImportDetailModalState>(
     },
 
     handleSave: async (importRecordId: string) => {
-      const { editFormData } = get();
-      if (!editFormData) return;
+      const { editFormData, importRecord } = get();
+      if (!editFormData || !importRecord) return;
 
       set({ saving: true, error: null });
 
       try {
+        // Check if warehouseId has changed
+        const warehouseIdChanged =
+          editFormData.warehouseId !== importRecord.warehouseId;
+
+        // Update import record
         await updateImportRecord(importRecordId, {
           importDate: editFormData.importDate,
           supplier: editFormData.supplier,
-          note: editFormData.note
+          note: editFormData.note,
+          warehouseId: editFormData.warehouseId
         });
+
+        // If warehouseId changed, update all related phone records
+        if (
+          warehouseIdChanged &&
+          editFormData.warehouseId &&
+          importRecord.warehouseId
+        ) {
+          // Update phoneDetails, phoneExporteds, and phoneRecycles in parallel
+          await Promise.all([
+            updatePhoneDetailWarehouseIdByImportId(
+              importRecordId,
+              editFormData.warehouseId
+            ),
+            updatePhoneRecycleWarehouseIdByImportId(
+              importRecordId,
+              editFormData.warehouseId
+            )
+          ]);
+        }
 
         const updatedRecord = await getImportRecordById(importRecordId);
         if (updatedRecord) {

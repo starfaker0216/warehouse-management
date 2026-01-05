@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { ImportRecord } from "../../lib/importService";
 import Loading from "../common/Loading";
 import { useImportDetailModalStore } from "../../stores/useImportDetailModalStore";
+import { useWarehouseStore } from "../../stores/useWarehouseStore";
 import { PhoneDetailWithStatus } from "./types";
 import PhoneDetailsTable from "./PhoneDetailsTable";
 import PhoneDetailsCard from "./PhoneDetailsCard";
@@ -47,6 +48,7 @@ export default function ImportDetailModal({
     handleCancel,
     handleSave
   } = useImportDetailModalStore();
+  const { warehouses, fetchWarehouses } = useWarehouseStore();
 
   useEffect(() => {
     if (isOpen && importRecordId) {
@@ -55,6 +57,13 @@ export default function ImportDetailModal({
       resetState();
     }
   }, [isOpen, importRecordId, loadImportRecord, resetState]);
+
+  // Load warehouses when modal opens
+  useEffect(() => {
+    if (isOpen && warehouses.length === 0) {
+      fetchWarehouses();
+    }
+  }, [isOpen, warehouses.length, fetchWarehouses]);
 
   const handleNoteChange = (note: string) => {
     setEditFormData({ note });
@@ -66,6 +75,10 @@ export default function ImportDetailModal({
 
   const handleSupplierChange = (supplier: string) => {
     setEditFormData({ supplier });
+  };
+
+  const handleWarehouseChange = (warehouseId: string) => {
+    setEditFormData({ warehouseId });
   };
 
   const handleSaveClick = () => {
@@ -90,6 +103,7 @@ export default function ImportDetailModal({
           suppliers={suppliers}
           newSupplier={newSupplier}
           showAddSupplier={showAddSupplier}
+          warehouses={warehouses}
           warehouseName={warehouseName}
           isEditing={isEditing}
           phoneDetails={phoneDetails}
@@ -99,6 +113,7 @@ export default function ImportDetailModal({
           onSupplierChange={handleSupplierChange}
           onNewSupplierChange={setNewSupplier}
           onShowAddSupplier={setShowAddSupplier}
+          onWarehouseChange={handleWarehouseChange}
           onNoteChange={handleNoteChange}
         />
         <ModalFooter
@@ -150,12 +165,14 @@ interface ModalContentProps {
     importDate: Date;
     supplier: string;
     note: string;
+    warehouseId?: string;
   } | null;
   dateInputValue: string;
   isDateFocused: boolean;
   suppliers: string[];
   newSupplier: string;
   showAddSupplier: boolean;
+  warehouses: Array<{ id: string; name: string }>;
   warehouseName?: string;
   isEditing: boolean;
   phoneDetails: PhoneDetailWithStatus[];
@@ -165,6 +182,7 @@ interface ModalContentProps {
   onSupplierChange: (supplier: string) => void;
   onNewSupplierChange: (value: string) => void;
   onShowAddSupplier: (show: boolean) => void;
+  onWarehouseChange: (warehouseId: string) => void;
   onNoteChange: (note: string) => void;
 }
 
@@ -178,6 +196,7 @@ function ModalContent({
   suppliers,
   newSupplier,
   showAddSupplier,
+  warehouses,
   warehouseName,
   isEditing,
   phoneDetails,
@@ -187,6 +206,7 @@ function ModalContent({
   onSupplierChange,
   onNewSupplierChange,
   onShowAddSupplier,
+  onWarehouseChange,
   onNoteChange
 }: ModalContentProps) {
   if (loading) {
@@ -224,6 +244,7 @@ function ModalContent({
           suppliers={suppliers}
           newSupplier={newSupplier}
           showAddSupplier={showAddSupplier}
+          warehouses={warehouses}
           warehouseName={warehouseName}
           isEditing={isEditing}
           onDateChange={onDateChange}
@@ -232,6 +253,7 @@ function ModalContent({
           onSupplierChange={onSupplierChange}
           onNewSupplierChange={onNewSupplierChange}
           onShowAddSupplier={onShowAddSupplier}
+          onWarehouseChange={onWarehouseChange}
           onNoteChange={onNoteChange}
         />
 
