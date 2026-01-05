@@ -11,6 +11,7 @@ import { PhoneDetailWithStatus } from "../components/history/types";
 import { loadPhoneDetailsWithStatus } from "../components/history/phoneDetailLoader";
 import { updatePhoneDetailWarehouseIdByImportId } from "../lib/phoneDetailService";
 import { updatePhoneRecycleWarehouseIdByImportId } from "../lib/phoneRecycleService";
+import { usePhoneStore } from "./usePhoneStore";
 
 interface EditFormData {
   importDate: Date;
@@ -44,7 +45,7 @@ interface ImportDetailModalState {
   setShowAddSupplier: (show: boolean) => void;
   handleEdit: () => void;
   handleCancel: () => void;
-  handleSave: (importRecordId: string) => Promise<void>;
+  handleSave: (importRecordId: string) => Promise<boolean>;
   setError: (error: string | null) => void;
 }
 
@@ -158,7 +159,7 @@ export const useImportDetailModalStore = create<ImportDetailModalState>(
 
     handleSave: async (importRecordId: string) => {
       const { editFormData, importRecord } = get();
-      if (!editFormData || !importRecord) return;
+      if (!editFormData || !importRecord) return false;
 
       set({ saving: true, error: null });
 
@@ -194,17 +195,25 @@ export const useImportDetailModalStore = create<ImportDetailModalState>(
           ]);
         }
 
-        const updatedRecord = await getImportRecordById(importRecordId);
-        if (updatedRecord) {
-          set({ importRecord: updatedRecord });
+        // Reload phone list data on home page if warehouseId changed
+        if (warehouseIdChanged) {
+          const phoneStore = usePhoneStore.getState();
+          const currentState = phoneStore;
+          // Reload with current search term and warehouse filter
+          await currentState.fetchListPhoneDetails(
+            currentState.currentSearchTerm,
+            currentState.currentWarehouseId
+          );
         }
 
         set({ isEditing: false });
         toast.success("Đã cập nhật phiếu nhập hàng thành công!");
+        return true;
       } catch (err) {
         console.error("Error updating import record:", err);
         set({ error: "Không thể cập nhật phiếu nhập hàng" });
         toast.error("Không thể cập nhật phiếu nhập hàng");
+        return false;
       } finally {
         set({ saving: false });
       }

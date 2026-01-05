@@ -81,9 +81,13 @@ export default function ImportDetailModal({
     setEditFormData({ warehouseId });
   };
 
-  const handleSaveClick = () => {
+  const handleSaveClick = async () => {
     if (importRecordId) {
-      handleSave(importRecordId);
+      const success = await handleSave(importRecordId);
+      // Close modal after successful save
+      if (success) {
+        onClose();
+      }
     }
   };
 
