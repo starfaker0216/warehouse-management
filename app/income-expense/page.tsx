@@ -4,9 +4,11 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuthStore } from "../../stores/useAuthStore";
 import { useIncomeExpenseFormStore } from "../../stores/useIncomeExpenseFormStore";
+import { useWarehouseStore } from "../../stores/useWarehouseStore";
 import TypeSelectorField from "../../components/income-expense/TypeSelectorField";
 import CategoryInputField from "../../components/income-expense/CategoryInputField";
 import AmountInputField from "../../components/income-expense/AmountInputField";
+import WarehouseSelectorField from "../../components/import/WarehouseSelectorField";
 import { Toaster } from "react-hot-toast";
 
 export default function IncomeExpensePage() {
@@ -26,11 +28,42 @@ export default function IncomeExpensePage() {
     error,
     handleSubmit
   } = useIncomeExpenseFormStore();
+  const { warehouses, fetchWarehouses } = useWarehouseStore();
 
   // Initialize auth on mount
   useEffect(() => {
     initialize();
   }, [initialize]);
+
+  // Load warehouses when authenticated
+  useEffect(() => {
+    if (isAuthenticated && warehouses.length === 0) {
+      fetchWarehouses();
+    }
+  }, [isAuthenticated, warehouses.length, fetchWarehouses]);
+
+  // Auto-select warehouse from employee if not selected
+  useEffect(() => {
+    if (
+      isAuthenticated &&
+      employee?.warehouseId &&
+      warehouses.length > 0 &&
+      !formData.warehouseId
+    ) {
+      const warehouseExists = warehouses.find(
+        (w) => w.id === employee.warehouseId
+      );
+      if (warehouseExists) {
+        setFormData({ warehouseId: employee.warehouseId });
+      }
+    }
+  }, [
+    isAuthenticated,
+    employee?.warehouseId,
+    warehouses,
+    formData.warehouseId,
+    setFormData
+  ]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -108,15 +141,22 @@ export default function IncomeExpensePage() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 mb-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               {/* Type Selector */}
               <TypeSelectorField
                 type={formData.type}
                 onTypeChange={(type) => setFormData({ ...formData, type })}
               />
-            </div>
 
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              {/* Warehouse Selector */}
+              <WarehouseSelectorField
+                warehouses={warehouses}
+                selectedWarehouseId={formData.warehouseId || ""}
+                onWarehouseChange={(warehouseId) =>
+                  setFormData({ ...formData, warehouseId })
+                }
+              />
+
               {/* Category Input */}
               <CategoryInputField
                 category={formData.category}

@@ -11,13 +11,18 @@ export interface IncomeExpenseFormData {
   category: string;
   amount: number;
   note: string;
+  warehouseId?: string;
 }
 
-const initialFormData: IncomeExpenseFormData = {
-  type: "income",
-  category: "",
-  amount: 0,
-  note: ""
+const getInitialFormData = (): IncomeExpenseFormData => {
+  const employee = useAuthStore.getState().employee;
+  return {
+    type: "income",
+    category: "",
+    amount: 0,
+    note: "",
+    warehouseId: employee?.warehouseId || ""
+  };
 };
 
 interface IncomeExpenseFormState {
@@ -37,7 +42,7 @@ interface IncomeExpenseFormState {
 
 export const useIncomeExpenseFormStore = create<IncomeExpenseFormState>(
   (set, get) => ({
-    formData: initialFormData,
+    formData: getInitialFormData(),
     priceInputValue: "",
     loading: false,
     error: null,
@@ -53,7 +58,7 @@ export const useIncomeExpenseFormStore = create<IncomeExpenseFormState>(
 
     resetForm: () => {
       set({
-        formData: initialFormData,
+        formData: getInitialFormData(),
         priceInputValue: "",
         error: null
       });
@@ -76,14 +81,19 @@ export const useIncomeExpenseFormStore = create<IncomeExpenseFormState>(
         return;
       }
 
+      if (!state.formData.warehouseId || !state.formData.warehouseId.trim()) {
+        toast.error("Vui lòng chọn kho!");
+        set({ loading: false });
+        return;
+      }
+
       try {
         // Get employee info
         const employee = useAuthStore.getState().employee;
         const employeeId = employee?.id || "";
         const employeeName = employee?.name || "";
-        const warehouseId = employee?.warehouseId || undefined;
 
-        // Save record
+        // Save record with warehouseId from formData
         await addIncomeExpenseRecord({
           type: state.formData.type,
           category: state.formData.category.trim(),
@@ -91,7 +101,7 @@ export const useIncomeExpenseFormStore = create<IncomeExpenseFormState>(
           note: state.formData.note.trim(),
           employeeId,
           employeeName,
-          ...(warehouseId && { warehouseId })
+          warehouseId: state.formData.warehouseId
         });
 
         // Reset form
