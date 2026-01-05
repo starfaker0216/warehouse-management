@@ -4,13 +4,14 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../contexts/AuthContext";
 import { usePhoneStore } from "../stores/usePhoneStore";
+import { useWarehouseStore } from "../stores/useWarehouseStore";
 import PhoneFilters from "../components/home/PhoneFilters";
 import PhoneList from "../components/home/PhoneList";
 import Loading from "../components/common/Loading";
 import ErrorDisplay from "../components/common/ErrorDisplay";
 
 export default function Home() {
-  const { loading: authLoading, isAuthenticated } = useAuth();
+  const { loading: authLoading, isAuthenticated, employee } = useAuth();
   const router = useRouter();
   const {
     listPhoneDetails,
@@ -19,13 +20,42 @@ export default function Home() {
     fetchListPhoneDetails,
     totalCount
   } = usePhoneStore();
+  const { warehouses, fetchWarehouses } = useWarehouseStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | null>(
+    null
+  );
+
+  const isAdmin = employee?.role === "admin";
 
   // Memoize handleSearchChange to prevent PhoneFilters from re-rendering
   const handleSearchChange = useCallback((value: string) => {
     setSearchTerm(value);
   }, []);
+
+  // Load warehouses when authenticated
+  useEffect(() => {
+    if (isAuthenticated && warehouses.length === 0) {
+      fetchWarehouses();
+    }
+  }, [isAuthenticated, warehouses.length, fetchWarehouses]);
+
+  // Auto-select warehouse for admin if not selected
+  // Priority: employee.warehouseId > first warehouse
+  useEffect(() => {
+    if (isAdmin && warehouses.length > 0 && !selectedWarehouseId) {
+      // Use setTimeout to avoid calling setState synchronously in effect
+      setTimeout(() => {
+        const warehouseToSelect =
+          employee?.warehouseId &&
+          warehouses.find((w) => w.id === employee.warehouseId)
+            ? employee.warehouseId
+            : warehouses[0].id;
+        setSelectedWarehouseId(warehouseToSelect);
+      }, 0);
+    }
+  }, [isAdmin, warehouses, selectedWarehouseId, employee?.warehouseId]);
 
   // Debounce search term
   useEffect(() => {
@@ -36,16 +66,35 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Fetch listPhoneDetails với search - chỉ khi auth đã load xong
+  // Calculate warehouseId to use
+  // Priority: selectedWarehouseId > employee.warehouseId > first warehouse
+  const warehouseIdToUse = isAdmin
+    ? selectedWarehouseId ||
+      (employee?.warehouseId &&
+      warehouses.find((w) => w.id === employee.warehouseId)
+        ? employee.warehouseId
+        : warehouses.length > 0
+        ? warehouses[0].id
+        : null)
+    : null;
+
+  // Fetch listPhoneDetails với search và warehouse filter - chỉ khi auth đã load xong
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      fetchListPhoneDetails(debouncedSearchTerm);
+      // For non-admin users, always use their warehouseId (ignore selectedWarehouseId)
+      // For admin users, must select a specific warehouse
+      // Only fetch if admin has selected a warehouse or user is not admin
+      if (!isAdmin || (isAdmin && warehouseIdToUse)) {
+        fetchListPhoneDetails(debouncedSearchTerm, warehouseIdToUse);
+      }
     }
   }, [
     authLoading,
     isAuthenticated,
     fetchListPhoneDetails,
-    debouncedSearchTerm
+    debouncedSearchTerm,
+    warehouseIdToUse,
+    isAdmin
   ]);
 
   // Redirect to login if not authenticated
@@ -82,6 +131,10 @@ export default function Home() {
         <PhoneFilters
           searchTerm={searchTerm}
           onSearchChange={handleSearchChange}
+          isAdmin={isAdmin}
+          warehouses={warehouses}
+          selectedWarehouseId={selectedWarehouseId}
+          onWarehouseChange={setSelectedWarehouseId}
         />
 
         {/* Loading or Error State */}

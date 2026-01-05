@@ -1,13 +1,25 @@
 "use client";
 
 import { memo, useRef, useEffect } from "react";
+import { Warehouse } from "../../lib/warehouseService";
 
 interface PhoneFiltersProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
+  isAdmin: boolean;
+  warehouses: Warehouse[];
+  selectedWarehouseId: string | null;
+  onWarehouseChange: (warehouseId: string) => void;
 }
 
-function PhoneFilters({ searchTerm, onSearchChange }: PhoneFiltersProps) {
+function PhoneFilters({
+  searchTerm,
+  onSearchChange,
+  isAdmin,
+  warehouses,
+  selectedWarehouseId,
+  onWarehouseChange
+}: PhoneFiltersProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const isFocusedRef = useRef(false);
 
@@ -51,6 +63,23 @@ function PhoneFilters({ searchTerm, onSearchChange }: PhoneFiltersProps) {
             className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-900 placeholder-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:placeholder-zinc-400"
           />
         </div>
+        {isAdmin && warehouses.length > 0 && (
+          <div className="sm:w-64">
+            <select
+              value={selectedWarehouseId || ""}
+              onChange={(e) => onWarehouseChange(e.target.value)}
+              required
+              className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
+            >
+              <option value="">Chọn kho</option>
+              {warehouses.map((warehouse) => (
+                <option key={warehouse.id} value={warehouse.id}>
+                  {warehouse.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
     </div>
   );

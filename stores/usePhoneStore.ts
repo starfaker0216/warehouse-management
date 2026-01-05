@@ -19,12 +19,16 @@ interface PhoneState {
   loading: boolean;
   error: string | null;
   currentSearchTerm: string | undefined;
+  currentWarehouseId: string | null;
   currentPage: number;
   itemsPerPage: number;
   totalCount: number;
   setCurrentPage: (page: number) => void;
   reloadListPhoneDetails: () => Promise<void>;
-  fetchListPhoneDetails: (searchTerm?: string) => Promise<void>;
+  fetchListPhoneDetails: (
+    searchTerm?: string,
+    warehouseId?: string | null
+  ) => Promise<void>;
   fetchPhones: (searchTerm?: string) => Promise<void>;
   setPhones: (phones: Phone[]) => void;
   addPhone: (
@@ -50,6 +54,7 @@ export const usePhoneStore = create<PhoneState>((set) => ({
   loading: false,
   error: null,
   currentSearchTerm: undefined,
+  currentWarehouseId: null,
   currentPage: 1,
   itemsPerPage: 20,
   totalCount: 0,
@@ -103,15 +108,24 @@ export const usePhoneStore = create<PhoneState>((set) => ({
   reloadListPhoneDetails: async () => {
     const currentState = usePhoneStore.getState();
     set({ currentPage: 1 });
-    await currentState.fetchListPhoneDetails(currentState.currentSearchTerm);
+    await currentState.fetchListPhoneDetails(
+      currentState.currentSearchTerm,
+      currentState.currentWarehouseId
+    );
   },
 
-  fetchListPhoneDetails: async (searchTerm?: string) => {
+  fetchListPhoneDetails: async (
+    searchTerm?: string,
+    warehouseId?: string | null
+  ) => {
     const currentState = usePhoneStore.getState();
     const isSearchTermChanged = currentState.currentSearchTerm !== searchTerm;
+    const isWarehouseChanged = currentState.currentWarehouseId !== warehouseId;
     set({
       currentSearchTerm: searchTerm,
-      currentPage: isSearchTermChanged ? 1 : currentState.currentPage
+      currentWarehouseId: warehouseId,
+      currentPage:
+        isSearchTermChanged || isWarehouseChanged ? 1 : currentState.currentPage
     });
     set({ loading: true, error: null });
     try {
@@ -134,9 +148,20 @@ export const usePhoneStore = create<PhoneState>((set) => ({
         retries++;
       }
 
-      const warehouseId = employee?.warehouseId;
+      // Determine which warehouseId to use
+      // If warehouseId is provided (admin selected), use it
+      // Otherwise, use employee's warehouseId (for non-admin users)
+      const finalWarehouseId =
+        warehouseId !== undefined ? warehouseId : employee?.warehouseId || null;
 
-      if (!warehouseId) {
+      // For non-admin users, always use their warehouseId
+      // For admin users, must select a specific warehouse
+      const effectiveWarehouseId =
+        employee?.role === "admin"
+          ? finalWarehouseId
+          : employee?.warehouseId || null;
+
+      if (!effectiveWarehouseId) {
         set({
           error: "Không tìm thấy thông tin kho. Vui lòng đăng nhập lại.",
           loading: false,
@@ -147,7 +172,7 @@ export const usePhoneStore = create<PhoneState>((set) => ({
 
       const currentState = usePhoneStore.getState();
       const result = await getListPhoneDetails(
-        warehouseId,
+        effectiveWarehouseId,
         searchTerm,
         currentState.currentPage,
         currentState.itemsPerPage
