@@ -18,6 +18,7 @@ interface EditFormData {
   bankTransfer: number;
   cashPayment: number;
   otherPayment: string;
+  warehouseId?: string;
 }
 
 interface ExportDetailModalState {
@@ -43,7 +44,7 @@ interface ExportDetailModalState {
   setCashPaymentInputValue: (value: string) => void;
   handleEdit: () => void;
   handleCancel: () => void;
-  handleSave: (exportRecordId: string) => Promise<void>;
+  handleSave: (exportRecordId: string) => Promise<boolean>;
   setError: (error: string | null) => void;
 }
 
@@ -96,7 +97,8 @@ export const useExportDetailModalStore = create<ExportDetailModalState>(
           installmentPayment: record.installmentPayment,
           bankTransfer: record.bankTransfer,
           cashPayment: record.cashPayment,
-          otherPayment: record.otherPayment
+          otherPayment: record.otherPayment,
+          warehouseId: record.warehouseId
         },
         salePriceInputValue: formatCurrencyInput(record.salePrice || 0),
         installmentInputValue: formatCurrencyInput(
@@ -153,12 +155,16 @@ export const useExportDetailModalStore = create<ExportDetailModalState>(
     },
 
     handleSave: async (exportRecordId: string) => {
-      const { editFormData } = get();
-      if (!editFormData) return;
+      const { editFormData, exportRecord } = get();
+      if (!editFormData || !exportRecord) return false;
 
       set({ saving: true, error: null });
 
       try {
+        // Check if warehouseId has changed
+        const warehouseIdChanged =
+          editFormData.warehouseId !== exportRecord.warehouseId;
+
         // Update export record
         await updateExportRecord(exportRecordId, {
           customerPhone: editFormData.customerPhone,
@@ -169,15 +175,31 @@ export const useExportDetailModalStore = create<ExportDetailModalState>(
           installmentPayment: editFormData.installmentPayment,
           bankTransfer: editFormData.bankTransfer,
           cashPayment: editFormData.cashPayment,
-          otherPayment: editFormData.otherPayment
+          otherPayment: editFormData.otherPayment,
+          warehouseId: editFormData.warehouseId
         });
 
         // Update corresponding phoneExported records
-        await updatePhoneExportedByExportRecordId(exportRecordId, {
+        const phoneExportedUpdateData: {
+          customerPhone: string;
+          customerName: string;
+          salePrice: number;
+          warehouseId?: string;
+        } = {
           customerPhone: editFormData.customerPhone,
           customerName: editFormData.customerName,
           salePrice: editFormData.salePrice
-        });
+        };
+
+        // If warehouseId changed, include it in the update
+        if (warehouseIdChanged && editFormData.warehouseId) {
+          phoneExportedUpdateData.warehouseId = editFormData.warehouseId;
+        }
+
+        await updatePhoneExportedByExportRecordId(
+          exportRecordId,
+          phoneExportedUpdateData
+        );
 
         const updatedRecord = await getExportRecordById(exportRecordId);
         if (updatedRecord) {
@@ -186,10 +208,12 @@ export const useExportDetailModalStore = create<ExportDetailModalState>(
 
         set({ isEditing: false });
         toast.success("Đã cập nhật phiếu xuất hàng thành công!");
+        return true;
       } catch (err) {
         console.error("Error updating export record:", err);
         set({ error: "Không thể cập nhật phiếu xuất hàng" });
         toast.error("Không thể cập nhật phiếu xuất hàng");
+        return false;
       } finally {
         set({ saving: false });
       }

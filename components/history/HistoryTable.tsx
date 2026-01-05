@@ -10,9 +10,14 @@ import ExportDetailModal from "./ExportDetailModal";
 interface HistoryTableProps {
   items: HistoryItem[];
   warehouses: Array<{ id: string; name: string }>;
+  onSaveSuccess?: () => void;
 }
 
-export default function HistoryTable({ items, warehouses }: HistoryTableProps) {
+export default function HistoryTable({
+  items,
+  warehouses,
+  onSaveSuccess
+}: HistoryTableProps) {
   const [selectedImportId, setSelectedImportId] = useState<string | null>(null);
   const [selectedExportId, setSelectedExportId] = useState<string | null>(null);
   const [selectedWarehouseName, setSelectedWarehouseName] = useState<
@@ -319,6 +324,7 @@ export default function HistoryTable({ items, warehouses }: HistoryTableProps) {
         onClose={handleCloseExportModal}
         exportRecordId={selectedExportId}
         warehouseName={selectedWarehouseName}
+        onSaveSuccess={onSaveSuccess}
       />
     </>
   );

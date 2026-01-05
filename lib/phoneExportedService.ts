@@ -155,6 +155,7 @@ export const updatePhoneExportedByExportRecordId = async (
     customerPhone?: string;
     customerName?: string;
     salePrice?: number;
+    warehouseId?: string;
   }
 ): Promise<void> => {
   try {

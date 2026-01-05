@@ -5,19 +5,23 @@ import { ExportRecord } from "../../lib/exportService";
 import Loading from "../common/Loading";
 import { useExportDetailModalStore } from "../../stores/useExportDetailModalStore";
 import ExportRecordForm from "./ExportRecordForm";
+import { useWarehouseStore } from "../../stores/useWarehouseStore";
+import { Warehouse } from "../../lib/warehouseService";
 
 interface ExportDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   exportRecordId: string | null;
   warehouseName?: string;
+  onSaveSuccess?: () => void;
 }
 
 export default function ExportDetailModal({
   isOpen,
   onClose,
   exportRecordId,
-  warehouseName
+  warehouseName,
+  onSaveSuccess
 }: ExportDetailModalProps) {
   const {
     exportRecord,
@@ -42,6 +46,8 @@ export default function ExportDetailModal({
     handleSave
   } = useExportDetailModalStore();
 
+  const { warehouses, fetchWarehouses } = useWarehouseStore();
+
   useEffect(() => {
     if (isOpen && exportRecordId) {
       loadExportRecord(exportRecordId);
@@ -50,9 +56,21 @@ export default function ExportDetailModal({
     }
   }, [isOpen, exportRecordId, loadExportRecord, resetState]);
 
-  const handleSaveClick = () => {
+  useEffect(() => {
+    if (isOpen) {
+      fetchWarehouses();
+    }
+  }, [isOpen, fetchWarehouses]);
+
+  const handleSaveClick = async () => {
     if (exportRecordId) {
-      handleSave(exportRecordId);
+      const success = await handleSave(exportRecordId);
+      if (success) {
+        onClose();
+        if (onSaveSuccess) {
+          onSaveSuccess();
+        }
+      }
     }
   };
 
@@ -98,6 +116,9 @@ export default function ExportDetailModal({
           onOtherPaymentChange={(value) =>
             setEditFormData({ otherPayment: value })
           }
+          warehouses={warehouses}
+          selectedWarehouseId={editFormData?.warehouseId}
+          onWarehouseChange={(warehouseId) => setEditFormData({ warehouseId })}
         />
         <ModalFooter
           isEditing={isEditing}
@@ -174,6 +195,9 @@ interface ModalContentProps {
   onCashPaymentChange: (price: number) => void;
   onCashPaymentInputValueChange: (value: string) => void;
   onOtherPaymentChange: (value: string) => void;
+  warehouses?: Warehouse[];
+  selectedWarehouseId?: string;
+  onWarehouseChange?: (warehouseId: string) => void;
 }
 
 function ModalContent({
@@ -199,7 +223,10 @@ function ModalContent({
   onBankTransferInputValueChange,
   onCashPaymentChange,
   onCashPaymentInputValueChange,
-  onOtherPaymentChange
+  onOtherPaymentChange,
+  warehouses,
+  selectedWarehouseId,
+  onWarehouseChange
 }: ModalContentProps) {
   if (loading) {
     return (
@@ -249,6 +276,9 @@ function ModalContent({
         onCashPaymentChange={onCashPaymentChange}
         onCashPaymentInputValueChange={onCashPaymentInputValueChange}
         onOtherPaymentChange={onOtherPaymentChange}
+        warehouses={warehouses}
+        selectedWarehouseId={selectedWarehouseId}
+        onWarehouseChange={onWarehouseChange}
       />
     </div>
   );

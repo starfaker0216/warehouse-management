@@ -165,7 +165,11 @@ export default function HistoryPage() {
                 }}
               />
             </div>
-            <HistoryTable items={historyItems} warehouses={warehouses} />
+            <HistoryTable
+              items={historyItems}
+              warehouses={warehouses}
+              onSaveSuccess={fetchHistory}
+            />
             {historyItems.length > 10 && (
               <div className="mt-6">
                 <Pagination

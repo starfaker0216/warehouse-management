@@ -2,6 +2,8 @@ import { ExportRecord } from "../../lib/exportService";
 import { formatDate } from "../../utils/dateUtils";
 import { formatCurrency } from "../../utils/currencyUtils";
 import PriceInput from "../common/PriceInput";
+import WarehouseSelectorField from "../import/WarehouseSelectorField";
+import { Warehouse } from "../../lib/warehouseService";
 
 interface ExportRecordFormProps {
   exportRecord: ExportRecord;
@@ -21,6 +23,8 @@ interface ExportRecordFormProps {
   bankTransferInputValue: string;
   cashPaymentInputValue: string;
   warehouseName?: string;
+  warehouses?: Warehouse[];
+  selectedWarehouseId?: string;
   isEditing: boolean;
   onCustomerPhoneChange: (value: string) => void;
   onCustomerNameChange: (value: string) => void;
@@ -35,6 +39,7 @@ interface ExportRecordFormProps {
   onCashPaymentChange: (price: number) => void;
   onCashPaymentInputValueChange: (value: string) => void;
   onOtherPaymentChange: (value: string) => void;
+  onWarehouseChange?: (warehouseId: string) => void;
 }
 
 export default function ExportRecordForm({
@@ -45,6 +50,8 @@ export default function ExportRecordForm({
   bankTransferInputValue,
   cashPaymentInputValue,
   warehouseName,
+  warehouses,
+  selectedWarehouseId,
   isEditing,
   onCustomerPhoneChange,
   onCustomerNameChange,
@@ -58,7 +65,8 @@ export default function ExportRecordForm({
   onBankTransferInputValueChange,
   onCashPaymentChange,
   onCashPaymentInputValueChange,
-  onOtherPaymentChange
+  onOtherPaymentChange,
+  onWarehouseChange
 }: ExportRecordFormProps) {
   if (isEditing) {
     return (
@@ -164,19 +172,13 @@ export default function ExportRecordForm({
             />
           </div>
 
-          {warehouseName && (
-            <div>
-              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Kho
-              </label>
-              <input
-                type="text"
-                value={warehouseName}
-                disabled
-                className="mt-1 w-full rounded-lg border border-zinc-300 bg-zinc-50 px-4 py-2 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 cursor-not-allowed"
-              />
-            </div>
-          )}
+          {warehouses && warehouses.length > 0 && onWarehouseChange ? (
+            <WarehouseSelectorField
+              warehouses={warehouses}
+              selectedWarehouseId={selectedWarehouseId || ""}
+              onWarehouseChange={onWarehouseChange}
+            />
+          ) : null}
         </div>
 
         <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">

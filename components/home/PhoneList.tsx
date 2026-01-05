@@ -431,6 +431,9 @@ export default function PhoneList({
         onClose={handleCloseExportModal}
         exportRecordId={selectedExportRecordId}
         warehouseName={selectedWarehouseName}
+        onSaveSuccess={async () => {
+          await fetchListPhoneDetails(searchTerm);
+        }}
       />
 
       {/* Pagination - Bottom (only show if current page has > 10 items) */}
