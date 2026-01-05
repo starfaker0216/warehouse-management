@@ -76,7 +76,8 @@ export const addPhoneExported = async (
   phoneDetail: PhoneDetail,
   exportRecordId: string,
   customerPhone: string,
-  customerName: string
+  customerName: string,
+  warehouseId?: string
 ): Promise<string> => {
   try {
     const phoneExportedsRef = collection(db, "phoneExporteds");
@@ -85,7 +86,7 @@ export const addPhoneExported = async (
       phoneDetailId: phoneDetail.id,
       exportRecordId,
       phoneId: phoneDetail.phoneId,
-      warehouseId: phoneDetail.warehouseId,
+      warehouseId: warehouseId || phoneDetail.warehouseId,
       color: phoneDetail.color,
       imei: phoneDetail.imei,
       importPrice: phoneDetail.importPrice,

@@ -4,16 +4,19 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../contexts/AuthContext";
 import { useExportFormStore } from "../../stores/useExportFormStore";
+import { useWarehouseStore } from "../../stores/useWarehouseStore";
 import PriceInput from "../../components/common/PriceInput";
 import { Toaster, toast } from "react-hot-toast";
 import Loading from "../../components/common/Loading";
 import { getCustomerByPhone } from "../../lib/customerService";
 import BirthdayInputField from "../../components/export/BirthdayInputField";
+import WarehouseSelectorField from "../../components/import/WarehouseSelectorField";
 import { getPhoneDetail } from "../../lib/phoneDetailService";
 
 function ExportForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { employee } = useAuth();
   const {
     formData,
     setFormData,
@@ -31,9 +34,12 @@ function ExportForm() {
     resetForm,
     handleSubmit
   } = useExportFormStore();
+  const { warehouses, fetchWarehouses } = useWarehouseStore();
 
   const [isCheckingCustomer, setIsCheckingCustomer] = useState(false);
   const [isLoadingPhoneDetail, setIsLoadingPhoneDetail] = useState(false);
+
+  const isAdmin = employee?.role === "admin";
 
   const handleCheckCustomer = async () => {
     if (!formData.customerPhone || !formData.customerPhone.trim()) {
@@ -65,6 +71,13 @@ function ExportForm() {
       setIsCheckingCustomer(false);
     }
   };
+
+  // Load warehouses when component mounts
+  useEffect(() => {
+    if (warehouses.length === 0) {
+      fetchWarehouses();
+    }
+  }, [warehouses.length, fetchWarehouses]);
 
   // Initialize form from URL params (phoneDetailId)
   useEffect(() => {
@@ -162,6 +175,17 @@ function ExportForm() {
                     className="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-4 py-2 text-sm text-zinc-600 cursor-not-allowed dark:border-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-400"
                   />
                 </div>
+
+                {/* Warehouse Selector (only for admin) */}
+                {isAdmin && (
+                  <WarehouseSelectorField
+                    warehouses={warehouses}
+                    selectedWarehouseId={formData.warehouseId || ""}
+                    onWarehouseChange={(warehouseId) =>
+                      setFormData({ ...formData, warehouseId })
+                    }
+                  />
+                )}
 
                 {/* Giá bán */}
                 <div>

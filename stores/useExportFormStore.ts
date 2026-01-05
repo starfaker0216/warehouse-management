@@ -33,26 +33,30 @@ export interface ExportFormData {
   bankTransfer: number;
   cashPayment: number;
   otherPayment: string;
+  warehouseId?: string;
 }
 
-const initialFormData: ExportFormData = {
-  customerPhone: "",
-  customerName: "",
-  customerBirthday: "",
-  customerAddress: "",
-  customerDebt: 0,
-  phoneName: "",
-  color: "",
-  imei: "",
-  salePrice: 0,
-  gift: "",
-  note: "",
-  phoneDetailId: "",
-  phoneId: "",
-  installmentPayment: 0,
-  bankTransfer: 0,
-  cashPayment: 0,
-  otherPayment: ""
+const getInitialFormData = (): ExportFormData => {
+  return {
+    customerPhone: "",
+    customerName: "",
+    customerBirthday: "",
+    customerAddress: "",
+    customerDebt: 0,
+    phoneName: "",
+    color: "",
+    imei: "",
+    salePrice: 0,
+    gift: "",
+    note: "",
+    phoneDetailId: "",
+    phoneId: "",
+    installmentPayment: 0,
+    bankTransfer: 0,
+    cashPayment: 0,
+    otherPayment: "",
+    warehouseId: ""
+  };
 };
 
 interface ExportFormState {
@@ -76,7 +80,7 @@ interface ExportFormState {
 }
 
 export const useExportFormStore = create<ExportFormState>((set, get) => ({
-  formData: initialFormData,
+  formData: getInitialFormData(),
   priceInputValue: "",
   installmentInputValue: "",
   bankTransferInputValue: "",
@@ -99,13 +103,14 @@ export const useExportFormStore = create<ExportFormState>((set, get) => ({
   initializeFromPhoneDetail: (phoneDetail: PhoneDetail) => {
     set({
       formData: {
-        ...initialFormData,
+        ...getInitialFormData(),
         phoneDetailId: phoneDetail.id,
         phoneId: phoneDetail.phoneId,
         phoneName: phoneDetail.name || "",
         color: phoneDetail.color || "",
         imei: phoneDetail.imei || "",
-        salePrice: phoneDetail.salePrice || 0
+        salePrice: phoneDetail.salePrice || 0,
+        warehouseId: phoneDetail.warehouseId || ""
       },
       priceInputValue:
         phoneDetail.salePrice && phoneDetail.salePrice > 0
@@ -116,7 +121,7 @@ export const useExportFormStore = create<ExportFormState>((set, get) => ({
 
   resetForm: () => {
     set({
-      formData: initialFormData,
+      formData: getInitialFormData(),
       priceInputValue: "",
       installmentInputValue: "",
       bankTransferInputValue: "",
@@ -180,7 +185,19 @@ export const useExportFormStore = create<ExportFormState>((set, get) => ({
       const employee = useAuthStore.getState().employee;
       const employeeId = employee?.id || "";
       const employeeName = employee?.name || "";
-      const warehouseId = employee?.warehouseId || undefined;
+
+      // Use warehouseId from formData (for admin) or employee's warehouseId (for non-admin)
+      const warehouseId =
+        formData.warehouseId || employee?.warehouseId || undefined;
+
+      if (!warehouseId) {
+        set({
+          error: "Vui lòng chọn kho",
+          loading: false
+        });
+        toast.error("Vui lòng chọn kho");
+        return;
+      }
 
       // Add export record
       const exportRecordId = await addExportRecord({
@@ -200,7 +217,7 @@ export const useExportFormStore = create<ExportFormState>((set, get) => ({
         otherPayment: formData.otherPayment.trim(),
         employeeId,
         employeeName,
-        ...(warehouseId && { warehouseId })
+        warehouseId
       });
 
       // Save phone detail to phoneExporteds before deletion
@@ -209,11 +226,13 @@ export const useExportFormStore = create<ExportFormState>((set, get) => ({
         const phoneDetail = await getPhoneDetail(formData.phoneDetailId);
         if (phoneDetail) {
           // Save to phoneExporteds collection (importId and importDate will be copied from phoneDetail)
+          // Use warehouseId from formData (user selected) instead of phoneDetail's warehouseId
           await addPhoneExported(
             phoneDetail,
             exportRecordId,
             formData.customerPhone.trim(),
-            formData.customerName.trim()
+            formData.customerName.trim(),
+            warehouseId
           );
 
           // Delete phone detail after saving to phoneExporteds
