@@ -316,6 +316,7 @@ export default function HistoryTable({
         onClose={handleCloseImportModal}
         importRecordId={selectedImportId}
         warehouseName={selectedWarehouseName}
+        onSaveSuccess={onSaveSuccess}
       />
 
       {/* Export Detail Modal */}

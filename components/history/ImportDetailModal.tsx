@@ -16,13 +16,15 @@ interface ImportDetailModalProps {
   onClose: () => void;
   importRecordId: string | null;
   warehouseName?: string;
+  onSaveSuccess?: () => void;
 }
 
 export default function ImportDetailModal({
   isOpen,
   onClose,
   importRecordId,
-  warehouseName
+  warehouseName,
+  onSaveSuccess
 }: ImportDetailModalProps) {
   const {
     importRecord,
@@ -87,6 +89,9 @@ export default function ImportDetailModal({
       // Close modal after successful save
       if (success) {
         onClose();
+        if (onSaveSuccess) {
+          onSaveSuccess();
+        }
       }
     }
   };

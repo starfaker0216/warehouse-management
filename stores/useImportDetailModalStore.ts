@@ -11,7 +11,6 @@ import { PhoneDetailWithStatus } from "../components/history/types";
 import { loadPhoneDetailsWithStatus } from "../components/history/phoneDetailLoader";
 import { updatePhoneDetailWarehouseIdByImportId } from "../lib/phoneDetailService";
 import { updatePhoneRecycleWarehouseIdByImportId } from "../lib/phoneRecycleService";
-import { usePhoneStore } from "./usePhoneStore";
 
 interface EditFormData {
   importDate: Date;
@@ -193,17 +192,6 @@ export const useImportDetailModalStore = create<ImportDetailModalState>(
               editFormData.warehouseId
             )
           ]);
-        }
-
-        // Reload phone list data on home page if warehouseId changed
-        if (warehouseIdChanged) {
-          const phoneStore = usePhoneStore.getState();
-          const currentState = phoneStore;
-          // Reload with current search term and warehouse filter
-          await currentState.fetchListPhoneDetails(
-            currentState.currentSearchTerm,
-            currentState.currentWarehouseId
-          );
         }
 
         set({ isEditing: false });

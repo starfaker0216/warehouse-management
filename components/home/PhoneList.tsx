@@ -423,6 +423,9 @@ export default function PhoneList({
         onClose={handleCloseImportModal}
         importRecordId={selectedImportId}
         warehouseName={selectedWarehouseName}
+        onSaveSuccess={async () => {
+          await fetchListPhoneDetails(searchTerm);
+        }}
       />
 
       {/* Export Detail Modal */}
