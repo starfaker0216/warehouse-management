@@ -77,7 +77,8 @@ export const addPhoneExported = async (
   exportRecordId: string,
   customerPhone: string,
   customerName: string,
-  warehouseId?: string
+  warehouseId?: string,
+  salePrice?: number
 ): Promise<string> => {
   try {
     const phoneExportedsRef = collection(db, "phoneExporteds");
@@ -90,7 +91,7 @@ export const addPhoneExported = async (
       color: phoneDetail.color,
       imei: phoneDetail.imei,
       importPrice: phoneDetail.importPrice,
-      salePrice: phoneDetail.salePrice,
+      salePrice: salePrice !== undefined ? salePrice : phoneDetail.salePrice,
       status: phoneDetail.status,
       updatedBy: phoneDetail.updatedBy,
       customerPhone,

@@ -227,12 +227,14 @@ export const useExportFormStore = create<ExportFormState>((set, get) => ({
         if (phoneDetail) {
           // Save to phoneExporteds collection (importId and importDate will be copied from phoneDetail)
           // Use warehouseId from formData (user selected) instead of phoneDetail's warehouseId
+          // Use salePrice from formData (user entered) instead of phoneDetail's salePrice
           await addPhoneExported(
             phoneDetail,
             exportRecordId,
             formData.customerPhone.trim(),
             formData.customerName.trim(),
-            warehouseId
+            warehouseId,
+            formData.salePrice
           );
 
           // Delete phone detail after saving to phoneExporteds
